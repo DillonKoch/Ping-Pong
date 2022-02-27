@@ -78,9 +78,14 @@ class Frame_Folders:
         """
         locates paths to all label json files in /Data/
         """
-        data_folder = ROOT_PATH + "/Data/"
+        # data_folder = ROOT_PATH + "/Data/"
+        # label_paths = []
+        # for game_folder in listdir_fullpath(data_folder):
+        #     label_paths += [file for file in listdir_fullpath(game_folder) if file.endswith('.json')]
+        # return label_paths
         label_paths = []
-        for game_folder in listdir_fullpath(data_folder):
+        game_folders = listdir_fullpath(ROOT_PATH + "/Data/Train/") + listdir_fullpath(ROOT_PATH + "/Data/Test/")
+        for game_folder in game_folders:
             label_paths += [file for file in listdir_fullpath(game_folder) if file.endswith('.json')]
         return label_paths
 

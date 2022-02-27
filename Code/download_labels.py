@@ -68,5 +68,5 @@ if __name__ == '__main__':
     self = x
 
     # ! UPDATE THIS TO SAVE TO THE RIGHT PLACE
-    path = ROOT_PATH + "/Data/Game1/split_4.json"
+    path = ROOT_PATH + "/Data/Test/Test_Game_1/split_1.json"
     x.run(path)
