@@ -25,7 +25,6 @@ if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
 
-
 def listdir_fullpath(d):
     return [os.path.join(d, f) for f in os.listdir(d)]
 
@@ -34,40 +33,6 @@ class Split_Videos:
     def __init__(self):
         pass
 
-    def run(self):  # Run
-        path = ROOT_PATH + "/Data/Train/Game1/gameplay.mp4"
-        cap = cv2.VideoCapture(path)
-
-        # fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        # out = cv2.VideoWriter('output.mp4', fourcc, 120.0, (1920, 1080))
-        stream = CamGear(source=path).start()
-        writer = WriteGear(output_filename="split_1.mp4")
-        split_num = 2
-        i = 0
-        while True:
-            if i % 100 == 0:
-                print(i)
-            # ret, frame = cap.read()
-            frame = stream.read()
-            if frame is None:
-                break
-            # out.write(frame)
-            writer.write(frame)
-
-            if i % 1000 == 0 and i > 1:
-                # out.release()
-                writer.close()
-                # out = cv2.VideoWriter(f'split_{split_num}.mp4', fourcc, 120.0, (1920, 1080))
-                writer = WriteGear(output_filename=f"split_{split_num}.mp4")
-                split_num += 1
-
-            i += 1
-        
-        # out.release()
-        # cap.release()
-        stream.stop()
-        writer.close()
-    
     def load_game_folders(self):  # Top Level
         """
         Loading paths to all "Game" folders in /Data/Train and /Data/Test
@@ -113,7 +78,6 @@ class Split_Videos:
         stream.stop()
         writer.close()
 
-    
     def run(self):  # Run
         game_folders = self.load_game_folders()
         for game_folder in game_folders:
@@ -122,8 +86,6 @@ class Split_Videos:
 
             gameplay_path = game_folder + "/gameplay.mp4"
             self.write_stream(gameplay_path, frames_per_split=1000)
-
-
 
 
 if __name__ == '__main__':

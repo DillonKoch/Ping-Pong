@@ -29,18 +29,36 @@ class Download_Labels:
     def __init__(self):
         self.LB_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJja3p6bjh1NXY0d3NjMHpjaGJrajdlZGIzIiwib3JnYW5pemF0aW9uSWQiOiJja3p6bjh1NWs0d3NiMHpjaGI4MDczMXlrIiwiYXBpS2V5SWQiOiJja3p6dGExeW0wenFwMHpicGQ5dzA0ZW00Iiwic2VjcmV0IjoiZjk1NzRmZDI0YTllZGMwN2EzZDRmZWMwYzcxY2I4NjYiLCJpYXQiOjE2NDU2MzYxNTcsImV4cCI6MjI3Njc4ODE1N30.oIfaRm28BlNekjgvb5eBhfsFeYDy-1PZsSqwnZflCCw"
 
+    def consolidate_frame_dict(self, frame_dict):  # Top Level
+        """
+        only keeping the parts of the downloaded data that we actually need
+        """
+        output = {}
+        if "classifications" in frame_dict:
+            for classification_dict in frame_dict['classifications']:
+                output[classification_dict['title']] = frame_dict['classifications'][0]['answer']['title']
+
+        if "objects" in frame_dict:
+            for object_dict in frame_dict['objects']:
+                if 'point' in object_dict:
+                    output[object_dict['title']] = object_dict['point']
+                elif 'bbox' in object_dict:
+                    output[object_dict['title']] = object_dict['bbox']
+
+        return output
+
     def run(self, path):  # Run
         lb = labelbox.Client(api_key=self.LB_API_KEY)
         project = lb.get_project('ckzznb6tr4xl20zchalsc4mea')
         labels = project.export_labels(download=True)
-        frames_link = labels[1]['Label']['frames']
+        frames_link = labels[0]['Label']['frames']
         response = requests.get(frames_link, headers={'Authorization': self.LB_API_KEY})
         labels_str = str(response.content)
         dict_strs = labels_str[2:].split(r'\n')[:-1]
         frame_dicts = [json.loads(dict_str) for dict_str in dict_strs]
         final_dict = {}
         for frame_dict in frame_dicts:
-            final_dict[frame_dict['frameNumber']] = frame_dict
+            final_dict[frame_dict['frameNumber']] = self.consolidate_frame_dict(frame_dict)
         with open(path, 'w') as f:
             json.dump(final_dict, f)
 
@@ -50,5 +68,5 @@ if __name__ == '__main__':
     self = x
 
     # ! UPDATE THIS TO SAVE TO THE RIGHT PLACE
-    path = ROOT_PATH + "/Data/Train/Game1/split_4.json"
+    path = ROOT_PATH + "/Data/Game1/split_4.json"
     x.run(path)
