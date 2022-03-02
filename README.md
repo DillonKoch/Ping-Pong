@@ -1,8 +1,8 @@
 # Ping-Pong
 
-<center>
-    <img src="./Misc/ForrestGump.gif">
-</center>
+<p align="center">
+  <img src="./Misc/ForrestGump.gif" width=600 />
+</p>
 
 
 ## Contents
