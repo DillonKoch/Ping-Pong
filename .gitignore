@@ -1,6 +1,7 @@
 # ignore all MP4's - ain't nobody got time for that
 *.mp4
 *.png
+*.pth
 
 
 # Byte-compiled / optimized / DLL files
