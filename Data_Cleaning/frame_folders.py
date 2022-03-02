@@ -141,6 +141,8 @@ class Frame_Folders:
         """
         model_type: "ball_present", "ball_location", "event_detection", "table_detection"
         """
+        # TODO don't erase stuff that's already saved
+        # TODO multithreading
         label_paths = self.find_label_paths()
         self.create_folders(label_paths, empty_folders=empty_folders)
 

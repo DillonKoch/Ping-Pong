@@ -27,7 +27,7 @@ if ROOT_PATH not in sys.path:
 
 class Download_Labels:
     def __init__(self):
-        self.LB_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJja3p6bjh1NXY0d3NjMHpjaGJrajdlZGIzIiwib3JnYW5pemF0aW9uSWQiOiJja3p6bjh1NWs0d3NiMHpjaGI4MDczMXlrIiwiYXBpS2V5SWQiOiJja3p6dGExeW0wenFwMHpicGQ5dzA0ZW00Iiwic2VjcmV0IjoiZjk1NzRmZDI0YTllZGMwN2EzZDRmZWMwYzcxY2I4NjYiLCJpYXQiOjE2NDU2MzYxNTcsImV4cCI6MjI3Njc4ODE1N30.oIfaRm28BlNekjgvb5eBhfsFeYDy-1PZsSqwnZflCCw"
+        self.LB_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbDA4cGg3MXAwcXlvMHo1MjQ5aHc4NGlhIiwib3JnYW5pemF0aW9uSWQiOiJjbDA4cGg3MWEwcXluMHo1MmY1bmtkdzRlIiwiYXBpS2V5SWQiOiJjbDA4cWRla2MxMGduMHo1MmI3M2NjNXI1Iiwic2VjcmV0IjoiMjc5OTI4NzYxMzk1ZjE3OWRmZDg1NDhhZThjYmFiZGMiLCJpYXQiOjE2NDYxNzU0NzAsImV4cCI6MjI3NzMyNzQ3MH0.dVHWYQtkOeXaLEsE-1QKVhlvFJ6hK3ZRkSH-5WZBlSg"
 
     def consolidate_frame_dict(self, frame_dict):  # Top Level
         """
@@ -49,7 +49,7 @@ class Download_Labels:
 
     def run(self, path):  # Run
         lb = labelbox.Client(api_key=self.LB_API_KEY)
-        project = lb.get_project('ckzznb6tr4xl20zchalsc4mea')
+        project = lb.get_project('cl08plfiy0svb0z52eyomd59k')
         labels = project.export_labels(download=True)
         frames_link = labels[0]['Label']['frames']
         response = requests.get(frames_link, headers={'Authorization': self.LB_API_KEY})
@@ -68,5 +68,5 @@ if __name__ == '__main__':
     self = x
 
     # ! UPDATE THIS TO SAVE TO THE RIGHT PLACE
-    path = ROOT_PATH + "/Data/Test/Test_Game_1/split_1.json"
+    path = ROOT_PATH + "/Ping-Pong/Data/Train/Train_Game_2/split_1.json"
     x.run(path)
