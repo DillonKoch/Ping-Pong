@@ -28,6 +28,7 @@ if ROOT_PATH not in sys.path:
 class Download_Labels:
     def __init__(self):
         self.LB_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbDA4cGg3MXAwcXlvMHo1MjQ5aHc4NGlhIiwib3JnYW5pemF0aW9uSWQiOiJjbDA4cGg3MWEwcXluMHo1MmY1bmtkdzRlIiwiYXBpS2V5SWQiOiJjbDA4cWRla2MxMGduMHo1MmI3M2NjNXI1Iiwic2VjcmV0IjoiMjc5OTI4NzYxMzk1ZjE3OWRmZDg1NDhhZThjYmFiZGMiLCJpYXQiOjE2NDYxNzU0NzAsImV4cCI6MjI3NzMyNzQ3MH0.dVHWYQtkOeXaLEsE-1QKVhlvFJ6hK3ZRkSH-5WZBlSg"
+        self.PROJECT_KEY = "cl08plfiy0svb0z52eyomd59k"
 
     def consolidate_frame_dict(self, frame_dict):  # Top Level
         """
@@ -48,17 +49,25 @@ class Download_Labels:
         return output
 
     def run(self, path):  # Run
+        """
+        downloading the labels, inserting them into a json file, and saving
+        """
+        # * downloading the response from Labelbox
         lb = labelbox.Client(api_key=self.LB_API_KEY)
-        project = lb.get_project('cl08plfiy0svb0z52eyomd59k')
+        project = lb.get_project(self.PROJECT_KEY)
         labels = project.export_labels(download=True)
         frames_link = labels[0]['Label']['frames']
         response = requests.get(frames_link, headers={'Authorization': self.LB_API_KEY})
         labels_str = str(response.content)
+
+        # * building the dict that will be written to the json file
         dict_strs = labels_str[2:].split(r'\n')[:-1]
         frame_dicts = [json.loads(dict_str) for dict_str in dict_strs]
         final_dict = {}
         for frame_dict in frame_dicts:
             final_dict[frame_dict['frameNumber']] = self.consolidate_frame_dict(frame_dict)
+
+        # * saving to json
         with open(path, 'w') as f:
             json.dump(final_dict, f)
 

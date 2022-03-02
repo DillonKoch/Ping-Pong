@@ -1,4 +1,4 @@
-# Ping Referee and Training Games
+# Ping Pong Referee and Training Games
 
 <p align="center">
   <img src="./Misc/ForrestGump.gif" width=600 />

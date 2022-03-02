@@ -54,7 +54,7 @@ class Split_Videos:
                 return True
         return False
 
-    def write_stream(self, gameplay_path, frames_per_split=1000):  # Top Level
+    def write_stream(self, gameplay_path, frames_per_split=3000):  # Top Level
         """
         Given a video stream, this writes it to split up files in the game folder
         """
@@ -70,7 +70,7 @@ class Split_Videos:
         for i in tqdm(range(num_frames)):
             frame = stream.read()
             writer.write(frame)
-            if i % 3000 == 0 and i > 1:
+            if i % frames_per_split == 0 and i > 1:
                 writer.close()
                 output_path = gameplay_path.replace("gameplay", f"split_{split_num}")
                 writer = WriteGear(output_filename=output_path, **output_params)
@@ -79,13 +79,16 @@ class Split_Videos:
         writer.close()
 
     def run(self):  # Run
+        """
+        splits all gameplay.mp4 files in the game folders into split files
+        """
         game_folders = self.load_game_folders()
         for game_folder in game_folders:
             if self.check_has_splits(game_folder):
                 continue
 
             gameplay_path = game_folder + "/gameplay.mp4"
-            self.write_stream(gameplay_path, frames_per_split=1000)
+            self.write_stream(gameplay_path, frames_per_split=3000)
 
 
 if __name__ == '__main__':
