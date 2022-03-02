@@ -1,7 +1,7 @@
 # Ping-Pong
 
 <center>
-<img src="./Misc/ForrestGump.gif">
+    <img src="./Misc/ForrestGump.gif">
 </center>
 
 
