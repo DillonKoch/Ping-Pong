@@ -23,7 +23,7 @@ I used two data sources in this project:
 - <a href="https://lab.osai.ai/">OpenTTGames Dataset</a>: an open online dataset of ping pong games shot at 120 frames per second
 - Videos I have personally taken with my iPhone 13, also recorded at 120 frames per second
 
-In both cases I label these videos using <a href="https://labelbox.com/">LabelBox</a>, an online data annotation tool.
+In both cases I labeled these videos using <a href="https://labelbox.com/">LabelBox</a>, an online data annotation tool.
 LabelBox limits the size of videos that can be uploaded, so I use [split_videos.py](/Data_Collection/split_videos.py) to split them up into smaller videos that can be uploaded.
 After labeling the videos, I download the labels to the [Data](/Data) folder using [download_labels.py](/Data_Collection/download_labels.py).
 
@@ -59,6 +59,7 @@ Four models are trained in this project:
 - [Table Detection](/Modeling/table_detection.py): locating the four corners of the table
 - [Event Detection](/Modeling/event_detection.py): identifying when an event occurs (serve, bounce, paddle hit, net hit)
 
+[predict.py](/Modeling/predict.py) uses the trained models to create another json file with the models' predictions for the ball, table, and events.
 
 <hr>
 <a name="Games"></a>

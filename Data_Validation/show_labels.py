@@ -67,7 +67,6 @@ class Show_Labels(DataValParent):
         adding a big rectangle around the whole frame when there is an event
         - putting it on the actual frame, and the next 9 just so I can see it easier in the video
         """
-        # frame_index = str(frame_index)
         for i in range(frame_index, frame_index + 10):
             i = str(i)
             if (i in label_dict) and ('Event' in label_dict[i]):
@@ -79,7 +78,7 @@ class Show_Labels(DataValParent):
     def run(self, split_path):  # Run
         """
         """
-        # * finding paths to the split .mp4 files and looping over them
+        # * finding paths to the split .json files and looping over them
         split_paths = self.load_split_paths() if split_path is None else [split_path]
         for i, split_path in enumerate(split_paths):
             print(f"running split {i}/{len(split_paths)} - {split_path}")
@@ -106,17 +105,17 @@ class Show_Labels(DataValParent):
 
 
 if __name__ == '__main__':
-    # x = Show_Labels()
-    # self = x
+    x = Show_Labels()
+    self = x
     # split_path = ROOT_PATH + "/Data/Train/Train_Game_1/split_4.mp4"
     # split_path = ROOT_PATH + "/Data/Test/Test_Game_1/split_1.mp4"
-    # split_path = None
-    # x.run(split_path)
+    split_path = None
+    x.run(split_path)
 
-    frame_folder = ROOT_PATH + "/Data/Train/Train_Game_2/split_1_frames/"
-    paths = sorted(listdir_fullpath(frame_folder), key=lambda x: int(x.split("_")[-1].split(".")[0]))
-    writer = WriteGear(output_filename='breh.mp4', **{" - input_framerate": 120})
-    for i in tqdm(range(3000)):
-        frame = cv2.imread(paths[i])
-        writer.write(frame)
-    writer.close()
+    # frame_folder = ROOT_PATH + "/Data/Train/Train_Game_2/split_1_frames/"
+    # paths = sorted(listdir_fullpath(frame_folder), key=lambda x: int(x.split("_")[-1].split(".")[0]))
+    # writer = WriteGear(output_filename='breh.mp4', **{" - input_framerate": 120})
+    # for i in tqdm(range(3000)):
+    #     frame = cv2.imread(paths[i])
+    #     writer.write(frame)
+    # writer.close()
