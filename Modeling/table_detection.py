@@ -61,7 +61,7 @@ class TableDetectionDataset(Dataset):
         """
         img_paths = []
         labels = []
-        label_paths = load_label_paths(train=self.train, test=self.test)[:1]  # ! FIXME
+        label_paths = load_label_paths(train=self.train, test=self.test)[:100]  # ! FIXME
         for label_path in label_paths:
             label_dict = load_json(label_path)
             corners = self._four_corners(label_dict)
@@ -156,7 +156,7 @@ class TableDetectionCNN(nn.Module):
 
 class TableDetection:
     def __init__(self):
-        self.epochs = 10
+        self.epochs = 20
         self.batch_size = 8
         self.learning_rate = 0.001
         self.momentum = 0.9

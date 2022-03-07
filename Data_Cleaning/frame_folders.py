@@ -117,3 +117,4 @@ if __name__ == '__main__':
     erase_existing = True
     model_type = "Ball Present"
     x.run(erase_existing, model_type)
+    # TODO eliminate repeated work
