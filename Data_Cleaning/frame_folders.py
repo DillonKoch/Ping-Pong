@@ -25,6 +25,8 @@ ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
+from Utilities.load_functions import load_json, load_label_paths
+
 
 def listdir_fullpath(d):
     return [os.path.join(d, f) for f in os.listdir(d)]
@@ -33,17 +35,6 @@ def listdir_fullpath(d):
 class FrameFolders:
     def __init__(self):
         pass
-
-    def find_label_paths(self):  # Top Level
-        """
-        locates paths to all label json files in /Data
-        """
-        label_paths = []
-        game_folders = listdir_fullpath(ROOT_PATH + "/Data/Train/") + listdir_fullpath(ROOT_PATH + "/Data/Test/")
-        for game_folder in game_folders:
-            label_paths += [file for file in listdir_fullpath(game_folder) if file.endswith('.json')
-                            and 'predictions' not in file]
-        return label_paths
 
     def create_folders(self, label_paths, erase_existing):  # Top Level
         """
@@ -58,14 +49,6 @@ class FrameFolders:
             if erase_existing:
                 for file in listdir_fullpath(frame_folder_path):
                     os.remove(file)
-
-    def load_labels(self, label_path):  # Top Level
-        """
-        simple json load
-        """
-        with open(label_path, 'r') as f:
-            label_dict = json.load(f)
-        return label_dict
 
     def _ball_event_frame_indices(self, label_dict, num_frames, ball=True):  # Specific Helper  find_save_frames
         """
@@ -110,12 +93,12 @@ class FrameFolders:
         """
         - model type can be "Table", "Ball", or "Event"
         """
-        label_paths = self.find_label_paths()
+        label_paths = load_label_paths()
         self.create_folders(label_paths, erase_existing)
 
         for i, label_path in enumerate(label_paths):
             print(f"Saving {model_type} frames for video {i} - {label_path}")
-            label_dict = self.load_labels(label_path)
+            label_dict = load_json(label_path)
 
             # * load video stuff
             split_vid_path = label_path.replace('.json', '.mp4')

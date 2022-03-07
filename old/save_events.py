@@ -23,7 +23,7 @@ ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
-from data_val_parent import DataValParent
+from old.data_val_parent import DataValParent
 
 
 class SaveEvents(DataValParent):

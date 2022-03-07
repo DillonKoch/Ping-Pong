@@ -40,12 +40,12 @@ This way, I can efficiently load only the frames I need for training.
 <hr>
 <a name="Data-Validation"></a>
 
-## [3. Data Validation](Data_Validation/)
+<!-- ## [3. Data Validation](Data_Validation/) -->
 
-I wrote the following data validation scripts to make sure the data collection and cleaning went as planned:
-- [data_val_parent.py](/Data_Validation/data_val_parent.py) includes shared code between data validation files
-- [save_events.py](/Data_Validation/save_events.py) creates a video of only the events from a video
-- [show_labels.py](/Data_Validation/show_labels.py) annotates the input video with its table/ball/event labels
+<!-- I wrote the following data validation scripts to make sure the data collection and cleaning went as planned: -->
+<!-- - [data_val_parent.py](/Data_Validation/data_val_parent.py) includes shared code between data validation files -->
+<!-- - [save_events.py](/Data_Validation/save_events.py) creates a video of only the events from a video -->
+<!-- - [show_labels.py](/Data_Validation/show_labels.py) annotates the input video with its table/ball/event labels -->
 
 
 <hr>
