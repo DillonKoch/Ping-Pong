@@ -24,6 +24,8 @@ ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
+from Utilities.load_functions import load_game_folders
+
 
 def listdir_fullpath(d):
     return [os.path.join(d, f) for f in os.listdir(d)]
@@ -32,17 +34,6 @@ def listdir_fullpath(d):
 class Split_Videos:
     def __init__(self):
         pass
-
-    def load_game_folders(self):  # Top Level
-        """
-        Loading paths to all "Game" folders in /Data/Train and /Data/Test
-        """
-        train_path = ROOT_PATH + "/Data/Train"
-        test_path = ROOT_PATH + "/Data/Test"
-        train_folders = listdir_fullpath(train_path)
-        test_folders = listdir_fullpath(test_path)
-        game_folders = train_folders + test_folders
-        return game_folders
 
     def check_has_splits(self, game_folder):  # Top Level
         """
@@ -82,7 +73,7 @@ class Split_Videos:
         """
         splits all gameplay.mp4 files in the game folders into split files
         """
-        game_folders = self.load_game_folders()
+        game_folders = load_game_folders()
         for game_folder in game_folders:
             if self.check_has_splits(game_folder):
                 continue
