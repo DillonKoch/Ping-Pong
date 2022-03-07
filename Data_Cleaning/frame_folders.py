@@ -83,11 +83,11 @@ class FrameFolders:
 
     def find_save_frames(self, label_dict, num_frames, model_type):  # Top Level
         """
-        - "Table" saves all frames
+        - "Table" and "Ball Present" saves all frames
         - "Ball" saves frames within 4 frames of the ball
         - "Event" saves frames within 4 frames of an event
         """
-        if model_type == "Table":
+        if model_type in ["Table", 'Ball Present']:
             return list(range(num_frames))
         elif model_type == "Ball":
             return self._ball_event_frame_indices(label_dict, num_frames, ball=True)
@@ -131,6 +131,6 @@ class FrameFolders:
 if __name__ == '__main__':
     x = FrameFolders()
     self = x
-    erase_existing = False
-    model_type = "Table"
+    erase_existing = True
+    model_type = "Ball Present"
     x.run(erase_existing, model_type)

@@ -22,6 +22,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms
 from torchvision.io import read_image
 
 ROOT_PATH = dirname(dirname(abspath(__file__)))
@@ -65,7 +66,7 @@ class BallPresentDataset(Dataset):
             label_dict = self._load_label_dict(label_path)
 
             frame_folder_path = label_path.replace(".json", "_frames/")
-            current_frame_folder_paths = listdir_fullpath(frame_folder_path)
+            current_frame_folder_paths = sorted(listdir_fullpath(frame_folder_path))
 
             for i, cffp in enumerate(current_frame_folder_paths):
                 if (i > 3) and (i < len(current_frame_folder_paths) - 4):
@@ -73,6 +74,7 @@ class BallPresentDataset(Dataset):
                     label = str(i) in label_dict and "Ball" in label_dict[str(i)]
                     labels.append(label)
 
+        labels = torch.tensor(labels).float().to('cuda')
         return middle_frame_paths, labels
 
     def __len__(self):
@@ -88,17 +90,18 @@ class BallPresentDataset(Dataset):
     def __getitem__(self, idx):
         middle_frame_path = self.middle_frame_paths[idx]
         stack_paths = self.stack_paths(middle_frame_path)
-        stack_images = [read_image(path) for path in stack_paths]
-        stack = torch.stack(stack_images).to('cuda')
+        stack_images = [read_image(path) / 255.0 for path in stack_paths]
+        stack_images = [transforms.Resize(size=(128, 320))(img) for img in stack_images]
+        stack = torch.cat(stack_images).to('cuda')
         label = self.labels[idx]
-        label = torch.tensor(label).astype(torch.float).to('cuda')
-        return stack, label
+        # label = torch.tensor(float(label)).to('cuda')
+        return stack.float(), label
 
 
 class BallPresentCNN(nn.Module):
     def __init__(self):
         super(BallPresentCNN, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv1 = nn.Conv2d(27, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 12, 5)
         self.fc1 = nn.Linear(26796, 1000)
@@ -128,20 +131,21 @@ class BallPresent:
         self.test_dataloader = DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=True)
 
         self.model = BallPresentCNN().to("cuda")
-        self.loss_fn = nn.CrossEntropyLoss()
+        self.loss_fn = nn.BCELoss()
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=self.momentum)
 
     def train_loop(self):  # Top Level
         size = len(self.train_dataloader.dataset)
         for batch, (X, y) in enumerate(self.train_dataloader):
             pred = self.model(X)
-            loss = self.loss_fn(pred, y)
+            m = nn.Sigmoid()
+            loss = self.loss_fn(m(pred), torch.unsqueeze(y, 1))
 
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
 
-            if batch % 25 == 0:
+            if batch % 10 == 0:
                 loss = loss.item()
                 current = batch * len(X)
                 print(f"Loss: {loss:.3f} | {current}/{size}")
