@@ -29,6 +29,8 @@ ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
+from Utilities.load_functions import load_json, load_label_paths
+
 
 def listdir_fullpath(d):
     return [os.path.join(d, f) for f in os.listdir(d)]
@@ -37,22 +39,9 @@ def listdir_fullpath(d):
 class BallPresentDataset(Dataset):
     def __init__(self, train_test):
         self.train_test = train_test
+        self.train = train_test == "Train"
+        self.test = train_test == "Test"
         self.middle_frame_paths, self.labels = self.load_middle_frame_paths()
-
-    def _label_paths(self):  # Specific Helper load_train_img_paths
-        # ! repeated in table_detection
-        folder = ROOT_PATH + f"/Data/{self.train_test}"
-        label_paths = []
-        for game_folder in listdir_fullpath(folder):
-            label_paths += [file for file in listdir_fullpath(game_folder)
-                            if file.endswith('.json') and "predictions" not in file]
-        return label_paths
-
-    def _load_label_dict(self, label_path):  # Specific Helper load_train_img_paths
-        # ! repeated in table_detection
-        with open(label_path, 'r') as f:
-            label_dict = json.load(f)
-        return label_dict
 
     def load_middle_frame_paths(self):  # Top Level
         """
@@ -61,9 +50,9 @@ class BallPresentDataset(Dataset):
         """
         middle_frame_paths = []
         labels = []
-        label_paths = self._label_paths()
+        label_paths = load_label_paths(train=self.train, test=self.test)
         for label_path in label_paths:
-            label_dict = self._load_label_dict(label_path)
+            label_dict = load_json(label_path)
 
             frame_folder_path = label_path.replace(".json", "_frames/")
             current_frame_folder_paths = sorted(listdir_fullpath(frame_folder_path))
@@ -94,11 +83,14 @@ class BallPresentDataset(Dataset):
         stack_images = [transforms.Resize(size=(128, 320))(img) for img in stack_images]
         stack = torch.cat(stack_images).to('cuda')
         label = self.labels[idx]
-        # label = torch.tensor(float(label)).to('cuda')
         return stack.float(), label
 
 
 class BallPresentCNN(nn.Module):
+    """
+    CNN to determine whether the ball is present in the frame or not
+    """
+
     def __init__(self):
         super(BallPresentCNN, self).__init__()
         self.conv1 = nn.Conv2d(27, 6, 5)

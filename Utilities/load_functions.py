@@ -67,3 +67,10 @@ def load_label_paths(train=True, test=True):  # Run
         output += label_paths
 
     return output
+
+
+def load_stack_path_lists(train=True, test=True):  # Run
+    """
+    returns lists of paths to frame stacks, all 9 frames long
+    """
+    pass

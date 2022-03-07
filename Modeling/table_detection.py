@@ -31,6 +31,8 @@ ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
+from Utilities.load_functions import load_label_paths, load_json
+
 
 def listdir_fullpath(d):
     return [os.path.join(d, f) for f in os.listdir(d)]
@@ -39,28 +41,11 @@ def listdir_fullpath(d):
 class TableDetectionDataset(Dataset):
     def __init__(self, train_test):
         self.train_test = train_test
+        self.train = train_test == "Train"
+        self.test = train_test == "Test"
         self.img_paths, self.labels = self.load_img_paths()
 
-    def _label_paths(self):  # Specific Helper load_train_img_paths
-        """
-        loading paths to all label .json files
-        """
-        folder = ROOT_PATH + f"/Data/{self.train_test}"
-        label_paths = []
-        for game_folder in listdir_fullpath(folder):
-            label_paths += [file for file in listdir_fullpath(game_folder)
-                            if file.endswith('.json') and '_predictions' not in file]
-        return label_paths
-
-    def _load_label_dict(self, label_path):  # Specific Helper load_train_img_paths
-        """
-        simple json load
-        """
-        with open(label_path, 'r') as f:
-            label_dict = json.load(f)
-        return label_dict
-
-    def _four_corners(self, label_dict):  # Specific Helper load_train_img_paths
+    def _four_corners(self, label_dict):  # Specific Helper load_img_paths
         """
         returning the four corners of the table from the first frame
         (assuming the camera is stationary and the corners don't move throughout the video)
@@ -76,9 +61,9 @@ class TableDetectionDataset(Dataset):
         """
         img_paths = []
         labels = []
-        label_paths = self._label_paths()
+        label_paths = load_label_paths(train=self.train, test=self.test)[:1]  # ! FIXME
         for label_path in label_paths:
-            label_dict = self._load_label_dict(label_path)
+            label_dict = load_json(label_path)
             corners = self._four_corners(label_dict)
             frame_folder_path = label_path.replace(".json", "_frames/")
             current_frame_folder_paths = listdir_fullpath(frame_folder_path)
@@ -86,7 +71,7 @@ class TableDetectionDataset(Dataset):
             labels += [corners] * len(current_frame_folder_paths)
         return img_paths, labels
 
-    def __len__(self):
+    def __len__(self):  # Run
         """
         returning the # of img-label pairs in the whole dataset
         """
@@ -119,7 +104,7 @@ class TableDetectionDataset(Dataset):
             arr = cv2.circle(arr, (labels[7] * 320, (labels[6] * 128)), radius=2, color=(255, 0, 0), thickness=-1)
             assert cv2.imwrite(ROOT_PATH + f"/Data/Temp/{idx}.png", arr)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx):  # Run
         """
         given an index, this returns the image and corresponding label, cleaned for training
         - cleaning includes converting to tensor, resizing to (128,320), and flipping sometimes
@@ -151,15 +136,19 @@ class TableDetectionCNN(nn.Module):
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 12, 5)
-        self.fc1 = nn.Linear(26796, 1000)
+        self.conv3 = nn.Conv2d(12, 18, 5)
+        self.fc1 = nn.Linear(7776, 4000)
+        self.fc15 = nn.Linear(4000, 1000)
         self.fc2 = nn.Linear(1000, 250)
         self.fc3 = nn.Linear(250, 8)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
         x = torch.flatten(x, 1)
         x = F.relu(self.fc1(x))
+        x = F.relu(self.fc15(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
@@ -167,7 +156,7 @@ class TableDetectionCNN(nn.Module):
 
 class TableDetection:
     def __init__(self):
-        self.epochs = 1
+        self.epochs = 10
         self.batch_size = 8
         self.learning_rate = 0.001
         self.momentum = 0.9
@@ -212,7 +201,7 @@ class TableDetection:
             if batch % 25 == 0:
                 loss = loss.item()
                 current = batch * len(X)
-                print(f"Loss: {loss:.3f} | {current}/{size}")
+                print(f"Loss: {loss:.5f} | {current}/{size}")
 
     def test_loop(self):  # Top Level
         """
