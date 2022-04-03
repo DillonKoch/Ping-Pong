@@ -12,7 +12,6 @@
 # script to show the true labels from Labelbox on top of a video
 # ==============================================================================
 
-import json
 import sys
 from os.path import abspath, dirname
 import os
