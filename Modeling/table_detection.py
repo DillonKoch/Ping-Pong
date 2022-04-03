@@ -13,7 +13,6 @@
 # ==============================================================================
 
 
-import json
 import os
 import sys
 from os.path import abspath, dirname
@@ -98,10 +97,10 @@ class TableDetectionDataset(Dataset):
         if torch.rand(1).item() > 0.95:
             arr = np.array(transforms.ToPILImage()(img).convert('RGB'))
             arr = cv2.cvtColor(arr, cv2.COLOR_BGR2RGB)
-            arr = cv2.circle(arr, (labels[1] * 320, (labels[0] * 128)), radius=2, color=(0, 255, 0), thickness=-1)
-            arr = cv2.circle(arr, (labels[3] * 320, (labels[2] * 128)), radius=2, color=(0, 255, 255), thickness=-1)
-            arr = cv2.circle(arr, (labels[5] * 320, (labels[4] * 128)), radius=2, color=(0, 0, 255), thickness=-1)
-            arr = cv2.circle(arr, (labels[7] * 320, (labels[6] * 128)), radius=2, color=(255, 0, 0), thickness=-1)
+            arr = cv2.circle(arr, (int(labels[1]) * 320, int(labels[0] * 128)), radius=2, color=(0, 255, 0), thickness=-1)
+            arr = cv2.circle(arr, (int(labels[3]) * 320, int(labels[2] * 128)), radius=2, color=(0, 255, 255), thickness=-1)
+            arr = cv2.circle(arr, (int(labels[5]) * 320, int(labels[4] * 128)), radius=2, color=(0, 0, 255), thickness=-1)
+            arr = cv2.circle(arr, (int(labels[7]) * 320, int(labels[6] * 128)), radius=2, color=(255, 0, 0), thickness=-1)
             assert cv2.imwrite(ROOT_PATH + f"/Data/Temp/{idx}.png", arr)
 
     def __getitem__(self, idx):  # Run

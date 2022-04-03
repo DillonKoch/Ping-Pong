@@ -30,7 +30,7 @@ ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
-from Utilities.load_functions import (load_json, load_label_paths,
+from Utilities.load_functions import (load_json, load_label_paths, clear_temp_folder,
                                       load_stack_path_lists)
 from Utilities.image_functions import tensor_to_arr, hflip, colorjitter, gaussblur
 
@@ -85,16 +85,6 @@ class BallPresentDataset(Dataset):
     def __len__(self):  # Run
         return len(self.labels)
 
-    def save_stack(self, stack, label, idx):  # Top Level
-        """
-        saving stacks once in a while to /Data/Temp for visual validation
-        """
-        if torch.rand(1).item() > 0.9:
-            arr = tensor_to_arr(stack[12:15])
-            color = (0, 255, 0) if label else (0, 0, 255)
-            arr = cv2.rectangle(arr, (10, 10), (20, 20), color, -1)
-            assert cv2.imwrite(ROOT_PATH + f"/Data/Temp/{idx}.png", arr)
-
     def augment_stack(self, stack):  # Top Level
         """
         applying image augmentation to the stack
@@ -116,6 +106,16 @@ class BallPresentDataset(Dataset):
             stack = torch.cat(stack_imgs)
 
         return stack
+
+    def save_stack(self, stack, label, idx):  # Top Level
+        """
+        saving stacks once in a while to /Data/Temp for visual validation
+        """
+        if torch.rand(1).item() > 0.9:
+            arr = tensor_to_arr(stack[12:15])
+            color = (0, 255, 0) if label else (0, 0, 255)
+            arr = cv2.rectangle(arr, (10, 10), (20, 20), color, -1)
+            assert cv2.imwrite(ROOT_PATH + f"/Data/Temp/{idx}.png", arr)
 
     def __getitem__(self, idx):  # Run
         """
@@ -221,7 +221,6 @@ class BallPresent:
                 print(f"Average error: {total_error / total:.5f}")
 
     def test_loop(self):  # Top Level
-        # size = len(self.test_dataloader.dataset)
         num_batches = len(self.test_dataloader)
         test_loss = 0
         correct = 0
@@ -230,14 +229,13 @@ class BallPresent:
             for X, y in self.test_dataloader:
                 pred = torch.squeeze(self.model(X))
                 test_loss += self.loss_fn(pred, y).item()
-                # correct += (pred.argmax(dim=1) == y).type(torch.float).sum().item()
 
         test_loss /= num_batches
-        # correct /= size
         correct = 'NA'
         print(f"Test error: \n Accuracy: {correct}%, Avg Loss: {test_loss:.3f}")
 
     def run(self):  # Run
+        clear_temp_folder()
         for t in range(self.epochs):
             print(f"Epoch {t}")
             print("-" * 50)
