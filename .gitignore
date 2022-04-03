@@ -2,6 +2,7 @@
 *.mp4
 *.png
 *.pth
+*.MOV
 
 
 # Byte-compiled / optimized / DLL files

@@ -69,29 +69,10 @@ def load_label_paths(train=True, test=True):  # Run
     return output
 
 
-# def load_stack_path_lists(train=True, test=True):  # Run
-#     """
-#     returns lists of paths to all frame stacks, all 9 frames long
-#     - this list is often filtered down from here based on the label json / use case
-#     """
-#     output = []
-#     label_paths = load_label_paths(train=train, test=test)
-#     frame_folder_paths = [label_path.replace(".json", "_frames/") for label_path in label_paths]
-
-#     # * iterating through each folder of frames
-#     for frame_folder_path in frame_folder_paths:
-#         frames = sorted(listdir_fullpath(frame_folder_path), key=lambda x: int(x.split("_")[-1].split(".")[0]))
-#         n_frames = len(frames)
-
-#         # * adding all possible lists of 9 consecutive frames (stacks) to the output
-#         for i in range(4, n_frames - 4):
-#             stack = frames[i - 4:i + 5]
-#             output.append(stack)
-
-#     return output
-
-
 def load_stack_path_lists(label_path):
+    """
+    loading lists to all "stacks" of 9 frames that belong to the label_path input
+    """
     frame_folder_path = label_path.replace(".json", "_frames/")
     frames = sorted(listdir_fullpath(frame_folder_path), key=lambda x: int(x.split("_")[-1].split(".")[0]))
     n_frames = len(frames)
@@ -103,3 +84,13 @@ def load_stack_path_lists(label_path):
         output.append(stack)
 
     return output
+
+
+def clear_temp_folder():
+    """
+    deletes everything in /Data/Temp so I don't have to do it manually
+    """
+    folder = ROOT_PATH + "/Data/Temp/"
+    files = listdir_fullpath(folder)
+    for file in files:
+        os.remove(file)

@@ -56,3 +56,14 @@ def gaussblur(tensor):  # Run
     """
     blurrer = transforms.GaussianBlur(kernel_size=(1, 3), sigma=(0.1, 5))
     return blurrer(tensor)
+
+
+def save_stack_label_or_pred(stack, label_pred, file_desc):
+    """
+    annotating the stack with the label/pred given, and saving to {file_desc} in the /Data/Temp folder
+    """
+    arr = tensor_to_arr(stack[12:15])
+    p1 = (int((label_pred[0] * 320) - 5), int((label_pred[1] * 128) - 5))
+    p2 = (int((label_pred[0] * 320) + 5), int((label_pred[1] * 128) + 5))
+    arr = cv2.rectangle(arr, p1, p2, (0, 255, 0), 2)
+    assert cv2.imwrite(ROOT_PATH + f"/Data/Temp/{file_desc}.png", arr)
