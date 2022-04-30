@@ -184,7 +184,7 @@ class BallLocationDataset(Dataset):
         """
         saving stacks once in a while to /Data/Temp for visual validation
         """
-        if torch.rand(1).item() > 0.0:
+        if torch.rand(1).item() > 0.9:
             save_stack_label_or_pred(stack, label, f"true_{idx}")
 
     def __getitem__(self, idx):  # Run
@@ -316,7 +316,7 @@ class BallLocation:
         """
         saving middle frames with the ball location prediction annotated
         """
-        if torch.rand(1).item() > 0.0:
+        if torch.rand(1).item() > 0.9:
             for i, stack in enumerate(X):
                 save_stack_label_or_pred(stack, pred[i], f"{train_test}_pred_batch_{batch}_{i}")
 
@@ -347,10 +347,11 @@ class BallLocation:
 
         test_loss /= num_batches
         print(f"Test Loss: {test_loss:.5f}")
+        return test_loss
 
     def run(self):  # Run
         clear_temp_folder()
-        min_test_loss = float('-inf')
+        min_test_loss = float('inf')
 
         for t in range(self.epochs):
             print(f"Epoch {t}")

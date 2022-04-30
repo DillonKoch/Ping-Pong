@@ -17,6 +17,9 @@ import os
 import sys
 from os.path import abspath, dirname
 
+import cv2
+# from vidgear.gears import CamGear
+
 ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
@@ -94,3 +97,13 @@ def clear_temp_folder():
     files = listdir_fullpath(folder)
     for file in files:
         os.remove(file)
+
+
+# def load_vid_stream(vid_path):
+#     """
+#     loads a video stream from a vid_path
+#     """
+#     cap = cv2.VideoCapture(vid_path)
+#     num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+#     stream = CamGear(source=vid_path).start()
+#     return num_frames, stream

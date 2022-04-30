@@ -1,16 +1,17 @@
 # ==============================================================================
-# File: coffin_corner.py
+# File: shot_chart.py
 # Project: Games
-# File Created: Sunday, 3rd April 2022 7:58:16 pm
+# File Created: Sunday, 3rd April 2022 8:29:58 pm
 # Author: Dillon Koch
 # -----
-# Last Modified: Sunday, 3rd April 2022 7:58:17 pm
+# Last Modified: Sunday, 3rd April 2022 8:29:58 pm
 # Modified By: Dillon Koch
 # -----
 #
 # -----
-# creating a video of the coffin-corner game from a video and its labels/predictions
+# TODO create shot chart class, make a child class for coffin corner
 # ==============================================================================
+
 
 import sys
 from os.path import abspath, dirname
@@ -22,11 +23,10 @@ ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
+from Utilities.load_functions import load_json, load_vid_stream
 
-from Utilities.load_functions import load_json
 
-
-class CoffinCorner:
+class ShotChart:
     def __init__(self):
         pass
 
@@ -39,6 +39,16 @@ class CoffinCorner:
         y1 = dimensions['table y1']
         y2 = dimensions['table y2']
         return x1, y1, x2, y2
+
+    def dimensions_to_corners(self, dimensions):  # Global Helper
+        """
+        extracts the shot chart table dimensions into the four corners
+        """
+        top_left = (dimensions['table x1'], dimensions['table y1'])
+        bottom_left = (dimensions['table x1'], dimensions['table y2'])
+        top_right = (dimensions['table x2'], dimensions['table y1'])
+        bottom_right = (dimensions['table x2'], dimensions['table y2'])
+        return bottom_left, top_left, top_right, bottom_right
 
     def _table_dimensions(self):  # Specific Helper blank_shot_chart
         """
@@ -124,18 +134,90 @@ class CoffinCorner:
 
         return table_img
 
-    def run(self, json_path, vid_path):  # Run
-        label_dict = load_json(json_path)
+    def update_corners(self, label_dict, i, corner_dict={}):  # Top Level
+        """
+        updating the corner dict if new measurements for the corners appear in the i-th frame
+        - if i=1, this will populate the corner dict (all labels have corners in frame 1)
+        """
+        for j in range(1, 5):
+            corner_str = f"Corner {j}"
+            if (str(i) in label_dict) and (corner_str in label_dict[str(i)]):
+                corner_dict[corner_str] = label_dict[str(i)][corner_str]
+        return corner_dict
 
+    def bounce_in_frame(self, label_dict, i):  # Top Level
+        """
+        returns Bool indicating whether there was a bounce in the frame or not
+        """
+        if str(i) in label_dict:
+            if 'Event' in label_dict[str(i)]:
+                if label_dict[str(i)]['Event'] == 'Bounce':
+                    return True
+        return False
+
+    def _compute_homography(self, chart_corners, vid_corners):  # Specific Helper add_point
+        """
+        computes the 3x3 homogenous matrix H used to map points from video to shot chart
+        """
+        P = np.zeros((8, 9))
+        for i, (pp, p) in enumerate(zip(chart_corners, vid_corners)):
+            pp = np.append(pp, 1)
+            up, vp, _ = pp
+            p = np.append(p, 1)
+            new_P = np.zeros((2, 9))
+            new_P[0, :3] = p.T
+            new_P[0, -3:] = -up * p.T
+            new_P[1, 3:6] = p.T
+            new_P[1, -3:] = -vp * p.T
+            P[(i * 2):(i * 2) + 2] = new_P
+
+        # solving for H using SVD on the Ph = 0 equation
+        u, s, v = np.linalg.svd(P)
+        h = v.T[:, -1]
+        h1 = h[:3]
+        h2 = h[3:6]
+        h3 = h[6:]
+        H = np.array([h1, h2, h3])
+        H /= H[2, 2]
+        return H
+
+    def add_point(self, shot_chart, ball_dict, corner_dict):  # Top Level
+        chart_corners = self.dimensions_to_corners(self._table_dimensions())
+        vid_corners = [(corner_dict[key]['x'], corner_dict[key]['y']) for key in sorted(corner_dict.keys())]
+        H = self._compute_homography(chart_corners, vid_corners)
+        ball_x = ball_dict['left'] + (ball_dict['width'] / 2)
+        ball_y = ball_dict['top'] + (ball_dict['height'] / 2)
+        x, y, z = H.dot(np.array([ball_x, ball_y, 1]))
+        chart_x = x / z
+        chart_y = y / z
+
+        shot_chart = cv2.circle(shot_chart, (int(chart_x), int(chart_y)), 5, (255, 0, 0), -1)
+        return shot_chart
+
+    def run(self, json_path, vid_path):  # Run
+        """
+        """
+        label_dict = load_json(json_path)
         shot_chart = self.blank_shot_chart()
         assert cv2.imwrite('temp_shot_chart.png', shot_chart)
-        # track the table corners over time
-        # each time we see a bounce, add it to the shot chart, update score
+
+        num_frames, stream = load_vid_stream(vid_path)
+        corner_dict = self.update_corners(label_dict, 1)
+        for i in range(1, num_frames + 1):
+
+            if self.bounce_in_frame(label_dict, i):
+                ball_dict = label_dict[str(i)]['Ball']
+                corner_dict = self.update_corners(label_dict, i, corner_dict)
+                shot_chart = self.add_point(shot_chart, ball_dict, corner_dict)
+
+        assert cv2.imwrite('temp.png', shot_chart)
+        print("DONE")
+        return shot_chart
 
 
 if __name__ == '__main__':
-    x = CoffinCorner()
+    x = ShotChart()
     self = x
-    json_path = ROOT_PATH + f"/Data/Train/Train_Game_6_2022-03-13/split_1.json"
-    vid_path = ROOT_PATH + f"/Data/Train/Train_Game_6_2022-03-13/split_1.mp4"
+    json_path = ROOT_PATH + "/Data/Train/Train_Game_6_2022-03-13/split_1.json"
+    vid_path = ROOT_PATH + "/Data/Train/Train_Game_6_2022-03-13/split_1.mp4"
     x.run(json_path, vid_path)

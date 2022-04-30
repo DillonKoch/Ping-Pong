@@ -12,7 +12,6 @@
 # saving relevant frames to frame folders
 # ==============================================================================
 
-import json
 import os
 import sys
 from os.path import abspath, dirname

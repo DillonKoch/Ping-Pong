@@ -27,8 +27,8 @@ if ROOT_PATH not in sys.path:
 
 class Download_Labels:
     def __init__(self):
-        self.LB_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbDA4cGg3MXAwcXlvMHo1MjQ5aHc4NGlhIiwib3JnYW5pemF0aW9uSWQiOiJjbDA4cGg3MWEwcXluMHo1MmY1bmtkdzRlIiwiYXBpS2V5SWQiOiJjbDA4cWRla2MxMGduMHo1MmI3M2NjNXI1Iiwic2VjcmV0IjoiMjc5OTI4NzYxMzk1ZjE3OWRmZDg1NDhhZThjYmFiZGMiLCJpYXQiOjE2NDYxNzU0NzAsImV4cCI6MjI3NzMyNzQ3MH0.dVHWYQtkOeXaLEsE-1QKVhlvFJ6hK3ZRkSH-5WZBlSg"
-        self.PROJECT_KEY = "cl08plfiy0svb0z52eyomd59k"
+        self.LB_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJja3p6bjh1NXY0d3NjMHpjaGJrajdlZGIzIiwib3JnYW5pemF0aW9uSWQiOiJja3p6bjh1NWs0d3NiMHpjaGI4MDczMXlrIiwiYXBpS2V5SWQiOiJjbDFqdDh4dDMxYm5pMTBic2FheTllNjh2Iiwic2VjcmV0IjoiMjEwMWEwZjA5OTgyYzEyZjEyNGNiNzlkOTg5OGEyMzAiLCJpYXQiOjE2NDkwMjIyMTEsImV4cCI6MjI4MDE3NDIxMX0.gxjHEZzvvVKetjsCP5HKd_GUxtklSOzl6P7J2Pi4Tqc"
+        self.PROJECT_KEY = "ckzznb6tr4xl20zchalsc4mea"
 
     def consolidate_frame_dict(self, frame_dict):  # Top Level
         """
@@ -77,5 +77,5 @@ if __name__ == '__main__':
     self = x
 
     # ! UPDATE THIS TO SAVE TO THE RIGHT PLACE
-    path = ROOT_PATH + "/Data/Train/Train_Game_4/split_1.json"
+    path = ROOT_PATH + "/Data/Train/Train_Game_6_2022-03-13/split_1.json"
     x.run(path)
