@@ -1,0 +1,24 @@
+{
+    "os": "Linux-5.13.0-40-generic-x86_64-with-debian-bullseye-sid",
+    "python": "3.7.11",
+    "heartbeatAt": "2022-05-01T14:37:32.291640",
+    "startedAt": "2022-05-01T14:37:29.588030",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 2070 with Max-Q Design",
+    "gpu_count": 1,
+    "cpu_count": 12,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/media/allison/Samsung USB/Ping-Pong/Modeling/table_segmentation.py",
+    "codePath": "Modeling/table_segmentation.py",
+    "git": {
+        "remote": "https://github.com/DillonKoch/Ping-Pong.git",
+        "commit": "3dee9f752de2df42da2765686fb5467efacc075a"
+    },
+    "email": "dillonk428@gmail.com",
+    "root": "/media/allison/Samsung USB/Ping-Pong",
+    "host": "dillon-P95-96-97Ex-Rx",
+    "username": "allison",
+    "executable": "/home/allison/anaconda3/envs/ping_pong/bin/python"
+}

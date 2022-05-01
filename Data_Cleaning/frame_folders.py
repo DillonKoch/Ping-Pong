@@ -93,6 +93,7 @@ class FrameFolders:
         - model type can be "Table", "Ball", or "Event"
         """
         label_paths = load_label_paths()
+        label_paths = ['/media/allison/Samsung USB/Ping-Pong/Data/Train/Train_Game_6_2022-03-13/split_1.json']
         self.create_folders(label_paths, erase_existing)
 
         for i, label_path in enumerate(label_paths):
@@ -113,7 +114,7 @@ class FrameFolders:
 if __name__ == '__main__':
     x = FrameFolders()
     self = x
-    erase_existing = True
-    model_type = "Ball Present"
+    erase_existing = False
+    model_type = "Table"
     x.run(erase_existing, model_type)
     # TODO eliminate repeated work
