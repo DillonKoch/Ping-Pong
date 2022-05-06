@@ -252,9 +252,10 @@ class UNET(nn.Module):
 
 
 class Train:
-    def __init__(self, sweep=False):
+    def __init__(self, batch_size=16, learning_rate=0.0001, sweep=False):
         # * params
-        self.batch_size = 16
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
         self.epochs = 100
 
         # * wandb
@@ -271,7 +272,7 @@ class Train:
 
         # * model
         self.model = UNET().to('cuda')
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.loss = nn.BCEWithLogitsLoss()
         self.scaler = torch.cuda.amp.GradScaler()
 
@@ -341,8 +342,9 @@ class Train:
             dice_dec_count = dice_dec_count + 1 if dice_score < max_dice else 0
             if dice_score > max_dice:
                 print("Saving model")
-                dice_str = str(dice_score)[2:]
-                torch.save(self.model.state_dict(), ROOT_PATH + f"/Models/Table_Segmentation_UNET_{dice_str}.pth")
+                dice_str = "{:f}".format(dice_score).replace(".", "")
+                lr_str = "{:f}".format(self.learning_rate)[2:]
+                torch.save(self.model.state_dict(), ROOT_PATH + f"/Models/Table_Segmentation_UNET_{dice_str}_bs_{self.batch_size}_lr_{lr_str}.pth")
                 max_dice = dice_score
 
             if dice_dec_count >= 5:
@@ -354,10 +356,10 @@ def sweep():
     def train_wandb(config=None):
         with wandb.init(config=config):
             config = wandb.config
-            trainer = Train()
+            trainer = Train(batch_size=config.batch_size, learning_rate=config.learning_rate)
             trainer.run()
 
-    sweep_id = "dillonkoch/Ping-Pong/wvv4encb"
+    sweep_id = "dillonkoch/Ping-Pong/84lkfaqf"
     wandb.agent(sweep_id, train_wandb, count=100)
 
 

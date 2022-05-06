@@ -1,0 +1,1 @@
+{"Train Loss": 0.1984766721725464, "_timestamp": 1651537188, "_runtime": 1645, "_step": 664, "Correct": 99.4709701538086, "Dice Score": 0.9518374800682068, "Test Loss": 0.770202100276947, "_wandb": {"runtime": 1643}}
