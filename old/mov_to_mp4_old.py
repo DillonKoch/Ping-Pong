@@ -1,15 +1,15 @@
 # ==============================================================================
 # File: mov_to_mp4.py
 # Project: Data_Cleaning
-# File Created: Saturday, 7th May 2022 4:29:48 pm
+# File Created: Wednesday, 31st December 1969 6:00:00 pm
 # Author: Dillon Koch
 # -----
-# Last Modified: Saturday, 7th May 2022 4:29:48 pm
+# Last Modified: Thursday, 31st March 2022 3:31:32 pm
 # Modified By: Dillon Koch
 # -----
 #
 # -----
-# converting the .MOV files in /Data/Prod to .MP4 files
+# Converting .MOV files I take on my iPhone to .mp4 files for consistency
 # ==============================================================================
 
 
@@ -25,6 +25,8 @@ ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
+from Utilities.load_functions import load_game_folders
+
 
 def listdir_fullpath(d):
     return [os.path.join(d, f) for f in os.listdir(d)]
@@ -36,10 +38,12 @@ class Mov_to_MP4:
 
     def load_mov_paths(self):  # Top Level
         """
-        loading paths to .MOV files in /Data/Prod
+        loads full paths to all mov files in /Data
         """
-        prod_paths = listdir_fullpath(ROOT_PATH + "/Data/Prod")
-        mov_paths = [path for path in prod_paths if path.endswith(".MOV")]
+        game_folders = load_game_folders()
+        mov_paths = []
+        for game_folder in game_folders:
+            mov_paths += [path for path in listdir_fullpath(game_folder) if path[-4:] == ".MOV"]
         return mov_paths
 
     def convert_mov_to_mp4(self, mov_path):
@@ -59,12 +63,18 @@ class Mov_to_MP4:
         writer.close()
 
     def run(self):  # Run
+        """
+        converts all MOV files (taken from iPhone) to MP4 files for consistency
+        ! manually check if the MP4 works, then delete the MOV file
+        """
         mov_paths = self.load_mov_paths()
-        for i, mov_path in enumerate(mov_paths):
-            print(i, mov_path)
+        for mov_path in mov_paths:
             self.convert_mov_to_mp4(mov_path)
+
+        print("DONE")
 
 
 if __name__ == '__main__':
     x = Mov_to_MP4()
+    self = x
     x.run()
