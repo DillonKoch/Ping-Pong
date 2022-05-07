@@ -1,0 +1,4 @@
+name: ping_pong2
+channels:
+  - defaults
+prefix: /home/allison/anaconda3/envs/ping_pong2

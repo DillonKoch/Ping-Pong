@@ -25,13 +25,14 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms.functional as TF
-import wandb
 from skimage import draw
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from torchvision.io import read_image
 from torchvision.utils import save_image
 from tqdm import tqdm
+
+import wandb
 
 ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
@@ -364,6 +365,6 @@ def sweep():
 
 
 if __name__ == "__main__":
-    # x = Train()
-    # x.run()
-    sweep()
+    x = Train()
+    x.run()
+    # sweep()
