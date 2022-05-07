@@ -3,6 +3,7 @@
 *.png
 *.pth
 *.MOV
+*.tmp
 
 
 # Byte-compiled / optimized / DLL files
