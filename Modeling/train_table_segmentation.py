@@ -14,6 +14,7 @@
 
 import os
 import random
+import time
 import sys
 from os.path import abspath, dirname
 
@@ -272,7 +273,6 @@ class Train:
 
         with torch.no_grad():
             for batch_idx, (X, y) in enumerate(self.test_dataloader):
-                print(batch_idx, len(self.test_dataloader))
                 preds = torch.sigmoid(self.model(X))
                 loss = self.loss(preds, y)
                 preds = (preds > 0.5).float()
