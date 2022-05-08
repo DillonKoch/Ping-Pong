@@ -72,7 +72,7 @@ class FrameFolders:
                 save_path = vid_path.replace("gameplay.mp4", f"frames/{i}.png")
                 assert cv2.imwrite(save_path, frame)
 
-    def run(self, n=2000):  # Run
+    def run(self, n=3000):  # Run
         self.create_folders()
         vid_paths = self.load_vid_paths()
         for i, vid_path in enumerate(vid_paths):

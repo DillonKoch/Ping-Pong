@@ -1,32 +1,36 @@
 # ==============================================================================
 # File: table_segmentation.py
 # Project: Modeling
-# File Created: Saturday, 7th May 2022 6:23:30 pm
+# File Created: Wednesday, 31st December 1969 6:00:00 pm
 # Author: Dillon Koch
 # -----
-# Last Modified: Saturday, 7th May 2022 6:23:31 pm
+# Last Modified: Friday, 29th April 2022 10:56:05 am
 # Modified By: Dillon Koch
 # -----
 #
 # -----
-# training a UNET to perform semantic segmentation on the ping pong table
+# UNET semantic segmentation of the ping pong table
 # ==============================================================================
 
+
+import copy
 import os
-import random
 import sys
 from os.path import abspath, dirname
 
+import albumentations as A
 import cv2
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms.functional as TF
 from skimage import draw
-from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from torchvision.io import read_image
+from torchvision.utils import save_image
+from tqdm import tqdm
 
 import wandb
 
@@ -35,7 +39,7 @@ if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
 from Utilities.image_functions import colorjitter, gaussblur, hflip
-from Utilities.load_functions import clear_temp_folder, load_json
+from Utilities.load_functions import load_json, load_label_paths
 
 
 def listdir_fullpath(d):
@@ -43,64 +47,117 @@ def listdir_fullpath(d):
 
 
 class TableDataset(Dataset):
-    def __init__(self, train):
-        self.train = train
-        self.test = not train
-        self.game_paths = listdir_fullpath(ROOT_PATH + "/Data/Train/") if train else listdir_fullpath(ROOT_PATH + "/Data/Test/")
-        self.img_paths, self.corners = self.load_imgs_corners()
+    def __init__(self, train_test):
+        self.clear_temp()
+        self.train_test = train_test
+        self.train = train_test == "Train"
+        self.test = train_test == "Test"
+        self.img_paths, self.labels = self.load_imgs_labels()
 
-    def load_imgs_corners(self):  # Top Level  __init__
+    def clear_temp(self):  # Top Level  __init__
         """
-        creating a list of paths to frames, and a list of the frame's corner values
+        empties out /Data/Temp/ for a new run
+        """
+        folder = ROOT_PATH + "/Data/Temp/"
+        files = listdir_fullpath(folder)
+        for file in files:
+            os.remove(file)
+
+    def _four_corners(self, label_dict):  # Specific Helper load_img_paths
+        """
+        returning the four corners of the table from the first frame
+        (assuming the camera is stationary and the corners don't move throughout the video)
+        """
+        frame_1 = label_dict['1']
+        corners = ['Corner 1', 'Corner 2', 'Corner 3', 'Corner 4']
+        labels = [frame_1[corner][xy] for corner in corners for xy in ['y', 'x']]
+        for i in range(len(labels)):
+            if i % 2 == 0:
+                labels[i] *= (128 / 1080)
+            else:
+                labels[i] *= (320 / 1920)
+        return labels
+
+    def load_imgs_labels(self):  # Top Level __init__
+        """
+        loading paths to all the images, and the corresponding labels
         """
         img_paths = []
-        corners = []
-        for game_path in self.game_paths:
-            current_img_paths = listdir_fullpath(game_path + "/frames/")
-            current_corners = load_json(game_path + "/table.json")
-            img_paths += current_img_paths
-            corners += [current_corners] * len(current_img_paths)
-
-        temp = list(zip(img_paths, corners))
-        random.shuffle(temp)
-        img_paths, corners = zip(*temp)
-        return list(img_paths), list(corners)
+        labels = []
+        label_paths = load_label_paths(train=self.train, test=self.test)
+        for label_path in label_paths:
+            label_dict = load_json(label_path)
+            corners = self._four_corners(label_dict)
+            frame_folder_path = label_path.replace(".json", "_frames/")
+            current_frame_folder_paths = listdir_fullpath(frame_folder_path)
+            img_paths += current_frame_folder_paths
+            labels += [corners] * len(current_frame_folder_paths)
+        return img_paths, labels
 
     def __len__(self):  # Run
         """
-        number of training examples
+        number of items in the dataset
         """
-        # return 1000 if self.test else len(self.corners)
-        # return 256
-        return len(self.corners)
+        return len(self.labels)
 
-    def _clean_corner(self, corner_dict):  # Specific Helper  img_to_mask
-        x = corner_dict['x'] * (320 / 1920)
-        y = corner_dict['y'] * (128 / 1080)
-        x = int(round(x))
-        y = int(round(y))
-        return np.array([y, x])
-
-    def img_to_mask(self, img, corners):  # Top Level
+    def img_to_mask(self, img, labels):  # Top Level __getitem__
         """
         creating a binary image mask using the original image and the corner labels
         """
+        # * height/width, corners, polygon
         h = img.shape[1]
         w = img.shape[2]
-        c1 = self._clean_corner(corners['Corner 1'])
-        c2 = self._clean_corner(corners['Corner 2'])
-        c3 = self._clean_corner(corners['Corner 3'])
-        c4 = self._clean_corner(corners['Corner 4'])
+        c1 = np.array(labels[:2])
+        c2 = np.array(labels[2:4])
+        c3 = np.array(labels[4:6])
+        c4 = np.array(labels[6:])
         polygon = np.array([c1, c2, c3, c4])
 
         # * building the mask and cleaning tensor
         mask = draw.polygon2mask((h, w), polygon)
         mask = mask.astype(int)
+        # mask[mask == 1] = 255
         mask = torch.tensor(mask)
         mask = mask.unsqueeze(0)
         return mask.to('cuda').float()
 
-    def augment(self, img, mask):  # Top Level
+    def save_image(self, img, labels, idx):  # Top Level
+        """
+        saving an image once in a while to the /Data/Temp folder for data validation
+        - helps make sure the labels/img were horizontally flipped correctly
+        """
+        arr = np.array(transforms.ToPILImage()(img).convert('RGB'))
+        arr = cv2.cvtColor(arr, cv2.COLOR_BGR2RGB)
+        arr = cv2.circle(arr, (int(labels[1]), int(labels[0])), radius=2, color=(0, 255, 0), thickness=-1)
+        arr = cv2.circle(arr, (int(labels[3]), int(labels[2])), radius=2, color=(0, 255, 255), thickness=-1)
+        arr = cv2.circle(arr, (int(labels[5]), int(labels[4])), radius=2, color=(0, 0, 255), thickness=-1)
+        arr = cv2.circle(arr, (int(labels[7]), int(labels[6])), radius=2, color=(255, 0, 0), thickness=-1)
+        assert cv2.imwrite(ROOT_PATH + f"/Data/Temp/{idx}.png", arr)
+
+    def save_mask(self, img, mask, idx):  # Top Level
+        """
+        saving the original image, with the mask overlayed in white
+        """
+        combo_img = copy.deepcopy(img)
+        combo_img[0][mask[0] == 1] = 255
+        combo_img[1][mask[0] == 1] = 255
+        combo_img[2][mask[0] == 1] = 255
+        save_image(combo_img, ROOT_PATH + f"/Data/Temp/{idx}_mask.png")
+
+    def _hflip_labels(self, labels):  # Specific Helper augment
+        """
+        flipping the labels horizontally to match the flipped image
+        vertical value doesn't change, horizontal value is now (1-value)
+        """
+        new_label_order = [6, 7, 4, 5, 2, 3, 0, 1]  # have to flip the corners around 1/4 and 2/3
+        new_labels = torch.tensor([labels[i] for i in new_label_order]).to('cuda')
+
+        # * altering the x value of each corner
+        for i in [1, 3, 5, 7]:
+            new_labels[i] = 1 - new_labels[i]
+        return new_labels
+
+    def augment(self, img, mask, labels):  # Top Level
         """
         augmenting the image and mask to expand training data
         """
@@ -108,26 +165,30 @@ class TableDataset(Dataset):
         if rng < 0.2:
             img = hflip(img)
             mask = hflip(mask)
+            labels = self._hflip_labels(labels)
         elif rng < 0.4:
             img = colorjitter(img)
         elif rng < 0.6:
             img = gaussblur(img)
-        return img, mask
+        return img, mask, labels
 
     def __getitem__(self, idx):  # Run
         """
+        grabbing the {idx} image and mask
         """
         img_path = self.img_paths[idx]
-        corners = self.corners[idx]
-
         img = read_image(img_path).to('cuda') / 255.0
         img = transforms.Resize(size=(128, 320))(img).float()
-        mask = self.img_to_mask(img, corners)
-        img, mask = self.augment(img, mask)
+        labels = self.labels[idx]
+        mask = self.img_to_mask(img, labels)
+        img, mask, labels = self.augment(img, mask, labels)
 
         img = transforms.Normalize([0, 0, 0], [1, 1, 1])(img)
         mask = transforms.Normalize([0], [1])(mask)
 
+        if torch.rand(1).item() > 0.98:
+            self.save_image(img, labels, idx)
+            self.save_mask(img, mask, idx)
         return img, mask.float()
 
 
@@ -192,11 +253,11 @@ class UNET(nn.Module):
 
 
 class Train:
-    def __init__(self, batch_size=32, learning_rate=0.0001, sweep=False):
-        # * hyperparameters
+    def __init__(self, batch_size=16, learning_rate=0.0001, sweep=False):
+        # * params
         self.batch_size = batch_size
         self.learning_rate = learning_rate
-        self.epochs = 100000
+        self.epochs = 100
 
         # * wandb
         self.wandb = True
@@ -205,49 +266,35 @@ class Train:
             wandb.init(project="Ping-Pong", entity="dillonkoch")
 
         # * datasets
-        self.train_dataset = TableDataset(train=True)
+        self.train_dataset = TableDataset(train_test="Train")
         self.train_dataloader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
-        self.test_dataset = TableDataset(train=False)
+        self.test_dataset = TableDataset(train_test="Test")
         self.test_dataloader = DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=True)
 
         # * model
         self.model = UNET().to('cuda')
-        # self.model.load_state_dict(torch.load(ROOT_PATH + "/Modeling/Table_Segmentation_UNET_0974651_bs_32_lr_000100.pth"))
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.loss = nn.BCEWithLogitsLoss()
         self.scaler = torch.cuda.amp.GradScaler()
 
-    def save_input(self, X, y, epoch, batch_idx):  # Top Level
-        if torch.rand(1).item() > 0.99:
-            for i in range(X.shape[0]):
-                img = X[i]
-                mask = y[i]
-                mask = np.array(transforms.ToPILImage()(mask).convert('RGB'))
-                arr = np.array(transforms.ToPILImage()(img).convert('RGB'))
-                arr = cv2.cvtColor(arr, cv2.COLOR_BGR2RGB)
-                arr = np.maximum(arr, mask)
-                assert cv2.imwrite(ROOT_PATH + f"/Temp/label_epoch_{epoch}_batch_{batch_idx}_{i}.png", arr)
+    def save_pred_label(self, pred, y, batch_idx):  # Top Level
+        """
+        saving the predicted image and ground truth next to each other
+        """
+        if torch.rand(1).item() > 0.98:
+            for i in range(pred.shape[0]):
+                path = ROOT_PATH + f"/Data/Temp/pred_label_{batch_idx}_{i}.png"
+                save_image(pred[i], path)
 
-    def save_pred(self, X, y, pred, epoch, batch_idx, test=False):  # Top Level
-        if torch.rand(1).item() > 0.9:
-            for i in range(X.shape[0]):
-                mask = pred[i]
-                img = y[i]
-                mask = np.array(transforms.ToPILImage()(mask).convert('RGB'))
-                arr = np.array(transforms.ToPILImage()(img).convert('RGB'))
-                combo = np.hstack((arr, mask))
-                test_str = "Test_" if test else ""
-                assert cv2.imwrite(ROOT_PATH + f"/Temp/{test_str}pred_epoch_{epoch}_batch_{batch_idx}_{i}.png", combo)
-
-    def train_loop(self, epoch):  # Top Level
+    def train_loop(self):
+        """
+        """
         self.model.train()
 
-        for batch_idx, (X, y) in enumerate(self.train_dataloader):
+        for batch_idx, (X, y) in tqdm(enumerate(self.train_dataloader)):
             with torch.cuda.amp.autocast():
-                self.save_input(X, y, epoch, batch_idx)
                 pred = self.model(X)
-                binary_pred = (pred > 0.5).float()
-                self.save_pred(X, y, binary_pred, epoch, batch_idx)
+                self.save_pred_label(pred, y, batch_idx)
                 loss = self.loss(pred, y)
 
             self.optimizer.zero_grad()
@@ -261,22 +308,17 @@ class Train:
             if batch_idx % 10 == 0:
                 print(f"Batch {batch_idx+1}/{len(self.train_dataloader)}: Loss: {loss.item()}")
 
-            if batch_idx % 150 == 0:
-                self.test_loop(epoch)
-
-    def test_loop(self, epoch):  # Top Level
+    def test_loop(self):
         self.model.eval()
         num_correct = 0
         num_pixels = 0
         dice_score = 0
 
         with torch.no_grad():
-            for batch_idx, (X, y) in enumerate(self.test_dataloader):
-                print(batch_idx, len(self.test_dataloader))
+            for X, y in self.test_dataloader:
                 preds = torch.sigmoid(self.model(X))
                 loss = self.loss(preds, y)
                 preds = (preds > 0.5).float()
-                self.save_pred(X, y, preds, epoch, batch_idx, test=True)
                 num_correct += (preds == y).sum()
                 num_pixels += torch.numel(preds)
                 dice_score += (2 * (preds * y).sum()) / ((preds + y).sum() + 1e-8)
@@ -290,14 +332,12 @@ class Train:
         return dice_score / len(self.test_dataloader)
 
     def run(self):  # Run
-        clear_temp_folder()
         max_dice = float('-inf')
         dice_dec_count = 0
-
         for i in range(self.epochs):
             print(f"Epoch {i+1}/{self.epochs}")
-            self.train_loop(i)
-            dice_score = self.test_loop(i)
+            self.train_loop()
+            dice_score = self.test_loop()
 
             # * saving model and updating max DICE score
             dice_dec_count = dice_dec_count + 1 if dice_score < max_dice else 0
@@ -305,12 +345,12 @@ class Train:
                 print("Saving model")
                 dice_str = "{:f}".format(dice_score).replace(".", "")
                 lr_str = "{:f}".format(self.learning_rate)[2:]
-                torch.save(self.model.state_dict(), ROOT_PATH + f"/Modeling/Table_Segmentation_UNET_{dice_str}_bs_{self.batch_size}_lr_{lr_str}.pth")
+                torch.save(self.model.state_dict(), ROOT_PATH + f"/Models/Table_Segmentation_UNET_{dice_str}_bs_{self.batch_size}_lr_{lr_str}.pth")
                 max_dice = dice_score
 
             if dice_dec_count >= 5:
                 print("Early stopping")
-                # break
+                break
 
 
 def sweep():

@@ -93,7 +93,7 @@ def clear_temp_folder():
     """
     deletes everything in /Data/Temp so I don't have to do it manually
     """
-    folder = ROOT_PATH + "/Data/Temp/"
+    folder = ROOT_PATH + "/Temp/"
     files = listdir_fullpath(folder)
     for file in files:
         os.remove(file)
