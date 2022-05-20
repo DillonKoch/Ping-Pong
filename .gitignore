@@ -4,6 +4,7 @@
 *.pth
 *.MOV
 *.tmp
+*.pickle
 *wandb/
 
 

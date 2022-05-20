@@ -14,11 +14,9 @@
 
 import json
 import os
+import pickle
 import sys
 from os.path import abspath, dirname
-
-import cv2
-# from vidgear.gears import CamGear
 
 ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
@@ -54,6 +52,15 @@ def load_json(json_path):  # Run
     """
     with open(json_path, 'r') as f:
         data = json.load(f)
+    return data
+
+
+def load_pickle(pickle_path):  # Run
+    """
+    simple pickle load
+    """
+    with open(pickle_path, 'rb') as f:
+        data = pickle.load(f)
     return data
 
 
