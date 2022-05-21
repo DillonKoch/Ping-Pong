@@ -17,6 +17,7 @@ from os.path import abspath, dirname
 
 import cv2
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 from vidgear.gears import CamGear, WriteGear
 
@@ -33,6 +34,11 @@ from Games.game_parent import GameParent
 class CoffinCorner(GameParent):
     def __init__(self):
         super(CoffinCorner, self).__init__()
+
+        # * coffin corner distances
+        self.red_distance = 100
+        self.orange_distance = 200
+        self.yellow_distance = 300
 
     def _corner_points(self, dimensions):  # Global Helper
         """
@@ -122,11 +128,37 @@ class CoffinCorner(GameParent):
         img = self._outside_border(img, dimensions)
         return img
 
-    def _add_coffin_corners(self, table_img):  # Specific Helper blank_shot_chart
+    def _coffin_corner_legend(self, img):  # Helping Helper _add_coffin_corners
+        """
+        loads coffin_corner_legend.png and adds to the png
+        """
+        dimensions = self._table_dimensions()
+        legend = cv2.imread(ROOT_PATH + "/Games/coffin_corner_legend.png")
+        leg_h, leg_w, _ = legend.shape
+        left_border_width = dimensions['table x1']
+        leg_x1 = int((left_border_width - leg_w) / 2)
+        img_height = dimensions['img height']
+        leg_y1 = int((img_height - leg_h) / 2)
+        img[leg_y1:(leg_y1 + leg_h), leg_x1:(leg_x1 + leg_w)] = legend
+        return img
+
+    def _add_coffin_corners(self, img):  # Specific Helper blank_shot_chart
         """
         adding the red-yellow-green coffin corner regions in the corners of the shot chart img
         """
-        return table_img
+        dimensions = self._table_dimensions()
+        x1, y1, x2, y2 = self._corner_points(dimensions)
+        corners = [(x1, y1), (x1, y2), (x2, y1), (x2, y2)]
+        for corner in corners:
+            img = cv2.circle(img, corner, self.yellow_distance, (0, 255, 255), -1)
+            img = cv2.circle(img, corner, self.orange_distance, (51, 153, 255), -1)
+            img = cv2.circle(img, corner, self.red_distance, (0, 0, 255), -1)
+
+        # * white-ing out the area outside the table, reapplying table border
+        img = self._add_white_border(img, x1, y1, x2, y2)
+        img = self._outside_border(img, dimensions)
+        img = self._coffin_corner_legend(img)
+        return img
 
     def blank_shot_chart(self, add_coffin_corners=False):  # Top Level
         """
@@ -134,7 +166,8 @@ class CoffinCorner(GameParent):
         """
         dimensions = self._table_dimensions()
         table_img = self._table_img(dimensions)
-        table_img = self._add_coffin_corners(table_img) if add_coffin_corners else table_img
+        if add_coffin_corners:
+            table_img = self._add_coffin_corners(table_img)
         return np.uint8(table_img)
 
     def run_coffin_corner(self, pickle_path, vid_path):  # Run
@@ -184,10 +217,7 @@ class CoffinCorner(GameParent):
         H /= H[2, 2]
         return H
 
-    def add_bounce(self, shot_chart, ball, i, data):  # Top Level
-        """
-        adding a bounce to the shot chart
-        """
+    def ball_to_chart(self, ball, data, i):  # Top Level
         chart_corners = self._dimensions_to_corners(self._table_dimensions())
         table = data['Table'][i]
         vid_corners = [(table[1], table[0]), (table[3], table[2]), (table[5], table[4]), (table[7], table[6])]
@@ -195,7 +225,12 @@ class CoffinCorner(GameParent):
         x, y, z = H.dot(np.array([ball[0], ball[1], 1]))
         chart_x = x / z
         chart_y = y / z
+        return chart_x, chart_y
 
+    def add_bounce(self, shot_chart, chart_x, chart_y):  # Top Level
+        """
+        adding a bounce to the shot chart
+        """
         shot_chart = cv2.circle(shot_chart, (int(chart_x), int(chart_y)), 6, (255, 0, 0), -1)
         return shot_chart
 
@@ -215,26 +250,85 @@ class CoffinCorner(GameParent):
             writer.write(shot_chart)
         writer.close()
 
+    def coffin_corner_value(self, x, y):  # Top Level
+        """
+        computes the # points awarded for a shot landing at (x, y)
+        in the coffin corner challenge
+        """
+        x1, y1, x2, y2 = self._corner_points(self._table_dimensions())
+        corners = [(x1, y1), (x1, y2), (x2, y1), (x2, y2)]
+
+        # computing distance between point and corners, returning rewards
+        for i, corner in enumerate(corners):
+            left_scored = True if i < 2 else False
+            x_corner, y_corner = corner
+            distance = (((y - y_corner) ** 2) + ((x - x_corner) ** 2)) ** 0.5
+            if distance < self.red_distance:
+                return 100, left_scored
+            elif distance < self.orange_distance:
+                return 50, left_scored
+            elif distance < self.yellow_distance:
+                return 25, left_scored
+        return 0, None
+
+    def add_score(self, img, score1, score2):  # Top Level
+        """
+        adds a score to the top of the image
+        """
+        dimensions = self._table_dimensions()
+        # * blank img same shape as the top border in ping pong img
+        img_top_border = int((dimensions['img height'] - dimensions['table height']) / 2)
+        score_img = np.zeros((img_top_border, dimensions['img width']))
+        score_img.fill(255)
+        # * using PIL to be able to draw on it
+        score_img = Image.fromarray(score_img)
+        draw = ImageDraw.Draw(score_img)
+        font = ImageFont.truetype(ROOT_PATH + "/Games/score_font.ttf", 72)
+        # * drawing scores
+        table_width = dimensions['table width']
+        table_x1 = dimensions['table x1']
+        score1_x = int(table_x1 + (table_width / 4)) - (draw.textsize(str(score1), font=font)[0] / 2)
+        score2_x = int(table_x1 + ((3 * table_width) / 4)) - (draw.textsize(str(score2), font=font)[0] / 2)
+        dash_x = int(table_x1 + (table_width / 2)) - (draw.textsize('-', font=font)[0] / 2)
+
+        w, h = draw.textsize(str(score1))
+        draw.text((score1_x, 0), str(score1), 0, font=font)
+        w, h = draw.textsize('-')
+        draw.text((dash_x, 0), '-', 0, font=font)
+        w, h = draw.textsize(str(score2))
+        draw.text((score2_x, 0), str(score2), 0, font=font)
+        score_img = np.array(score_img)
+        score_img = cv2.cvtColor(score_img, cv2.COLOR_GRAY2BGR)
+        img[:img_top_border, :] = score_img
+        return img
+
     def merge_frames(self, gameplay_frame, shot_chart):  # Top Level
         return np.hstack((gameplay_frame, shot_chart))
 
-    def run_video_side_by_side(self, pickle_path, vid_path):  # Run
+    def run_video_side_by_side(self, pickle_path, vid_path, add_coffin_corners=False):  # Run
         """
         creating a video of the gameplay on the left, shot chart on the right
         """
         data, bounce_loc_dict = self.run_coffin_corner(pickle_path, vid_path)
-        shot_chart = self.blank_shot_chart()
+        shot_chart = self.blank_shot_chart(add_coffin_corners=add_coffin_corners)
 
         output_params = {"-input_framerate": 120}
         writer = WriteGear(output_filename='output.mp4', **output_params)
         stream = CamGear(source=vid_path).start()
 
         num_frames = max(bounce_loc_dict.keys()) + 100
+        left_score = 0
+        right_score = 0
         for i in tqdm(range(num_frames)):
             gameplay_frame = stream.read()
             if i in bounce_loc_dict.keys():
                 ball = bounce_loc_dict[i]
-                shot_chart = self.add_bounce(shot_chart, ball, i, data)
+                chart_ball_x, chart_ball_y = self.ball_to_chart(ball, data, i)
+                shot_chart = self.add_bounce(shot_chart, chart_ball_x, chart_ball_y)
+                new_score, left_scored = self.coffin_corner_value(chart_ball_x, chart_ball_y)
+                left_score = left_score + new_score if left_scored else left_score
+                right_score = right_score + new_score if left_scored else right_score
+            shot_chart = self.add_score(shot_chart, left_score, right_score)
 
             merged_frame = self.merge_frames(gameplay_frame, shot_chart)
             writer.write(merged_frame)
@@ -244,6 +338,9 @@ class CoffinCorner(GameParent):
         """
         creating a video of gameplay, but with the shot chart data overlayed onto the table
         """
+        # add shading to the table for coffin corner regions
+        # add score at the top
+        # add dots where the ball bounces (original coordinates not mapped to shot chart)
         pass
 
 
@@ -252,5 +349,6 @@ if __name__ == '__main__':
     self = x
     pickle_path = ROOT_PATH + "/output.pickle"
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"
+    add_coffin_corners = True
     # x.run_coffin_corner(pickle_path, vid_path)
-    x.run_video_side_by_side(pickle_path, vid_path)
+    x.run_video_side_by_side(pickle_path, vid_path, add_coffin_corners)
