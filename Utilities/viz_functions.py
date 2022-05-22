@@ -70,6 +70,7 @@ def show_table(img, table):  # Run
     """
     showing the table's border in gray on the image
     """
+    img = img_to_color(img)
     p1 = (table[1], table[0])
     p2 = (table[3], table[2])
     p3 = (table[5], table[4])
@@ -99,6 +100,7 @@ def show_event_box(img, event):  # Run
     """
     showing a big box around the image on the frame of an event
     """
+    img = img_to_color(img)
     color = (0, 255, 0) if event == 'Bounce' else (255, 0, 0) if event == 'Hit' else (0, 0, 255)
     img = cv2.rectangle(img, (10, 10), (1910, 1070), color, 5)
     return img
@@ -111,8 +113,9 @@ def show_ball_center(img, center, color=(255, 0, 0)):  # Run
     return img
 
 
-def show_arc_dots(img, output, i):  # Run
-    for arc in output['Arcs']:
+def show_arc_dots(img, output, i, arc_type='Raw Arcs'):  # Run
+    img = img_to_color(img)
+    for arc in output[arc_type]:
         if arc[0] <= i <= arc[1]:
             for j in range(arc[0], arc[1] + 1):
                 if j in output['Cleaned Ball Contours']:
@@ -121,8 +124,9 @@ def show_arc_dots(img, output, i):  # Run
     return img
 
 
-def show_arc_line(img, output, i):  # Run
-    for arc in output['Arcs']:
+def show_arc_line(img, output, i, arc_type='Raw Arcs'):  # Run
+    img = img_to_color(img)
+    for arc in output[arc_type]:
         if arc[0] <= i <= arc[1]:
             x = []
             y = []
