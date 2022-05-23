@@ -33,9 +33,10 @@ from Utilities.viz_functions import show_table, draw_contours, show_ball_center,
 
 
 class GameParent:
-    def __init__(self, frame_start, frame_end):
+    def __init__(self, frame_start, frame_end, saved_start):
         self.frame_start = frame_start
         self.frame_end = frame_end
+        self.saved_start = saved_start
 
     def _contour_l_center(self, contour_l):  # Global Helper
         """
@@ -883,7 +884,7 @@ class GameParent:
             img = show_arc_dots(img, output, i, arc_type="Interpolated Arcs") if run_show_arc_dots_interp else img
             img = show_arc_line(img, output, i, arc_type="Interpolated Arcs") if run_show_arc_lines_interp else img
 
-            assert cv2.imwrite(ROOT_PATH + f"/Temp/{i}.png", img)
+            assert cv2.imwrite(ROOT_PATH + f"/Temp/{self.saved_start + i}.png", img)
 
     def run_game_data(self, vid_path, load_saved_frames=False):  # Run
         output = self.blank_output()
@@ -920,9 +921,10 @@ class GameParent:
 
 
 if __name__ == '__main__':
+    saved_start = 3000
     frame_start = 0
-    frame_end = 1000
-    x = GameParent(frame_start, frame_end)
+    frame_end = 4000
+    x = GameParent(frame_start, frame_end, saved_start)
     self = x
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"
     load_saved_frames = True
