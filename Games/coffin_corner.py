@@ -174,9 +174,9 @@ class CoffinCorner(GameParent):
         data = load_pickle(pickle_path) if pickle_path is not None else self.run_game_data(vid_path)
         bounce_loc_dict = {}
 
-        bounce_idxs = [idx for idx in list(data['Events'].keys()) if data['Events'][idx] == 'Bounce']
+        bounce_idxs = [idx for idx in list(data['Interpolated Events'].keys()) if data['Interpolated Events'][idx] == 'Bounce']
         for bounce_idx in bounce_idxs:
-            ball = data['Ball Center'][bounce_idx]
+            ball = data['Final Ball Center'][bounce_idx]
             bounce_loc_dict[bounce_idx] = ball
 
         return data, bounce_loc_dict
@@ -347,7 +347,7 @@ class CoffinCorner(GameParent):
 if __name__ == '__main__':
     x = CoffinCorner()
     self = x
-    pickle_path = ROOT_PATH + "/output.pickle"
+    pickle_path = ROOT_PATH + "/output_FULL.pickle"
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"
     add_coffin_corners = True
     # x.run_coffin_corner(pickle_path, vid_path)

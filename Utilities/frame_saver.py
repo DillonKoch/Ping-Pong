@@ -16,6 +16,7 @@
 
 import sys
 from os.path import abspath, dirname
+import os
 
 import cv2
 from vidgear.gears import CamGear, WriteGear
@@ -25,12 +26,27 @@ if ROOT_PATH not in sys.path:
     sys.path.append(ROOT_PATH)
 
 
+def listdir_fullpath(d):
+    return [os.path.join(d, f) for f in os.listdir(d)]
+
+
 class FrameSaver:
     def __init__(self):
         pass
 
+    def clear_saved_frames(self):  # Top Level
+        """
+        clearing out what used to be in /Saved/Frames/
+        """
+        paths = listdir_fullpath(ROOT_PATH + "/Saved_Frames/")
+        for path in paths:
+            os.remove(path)
+
     def run(self, vid_path, frame_start, frame_end):  # Run
+        self.clear_saved_frames()
         stream = CamGear(source=vid_path).start()
+        cap = cv2.VideoCapture(vid_path)
+        num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         i = 0
         while True:
             print(i)
@@ -40,7 +56,7 @@ class FrameSaver:
                 assert cv2.imwrite(path, frame)
             i += 1
 
-            if i > frame_end:
+            if i > frame_end or i > num_frames:
                 break
 
 
@@ -48,6 +64,6 @@ if __name__ == '__main__':
     x = FrameSaver()
     self = x
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"
-    frame_start = 2400
-    frame_end = 3000
+    frame_start = 3500
+    frame_end = 6500
     x.run(vid_path, frame_start, frame_end)

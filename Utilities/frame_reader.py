@@ -29,9 +29,13 @@ def listdir_fullpath(d):
 
 
 class FrameReader:
-    def __init__(self):
+    def __init__(self, start=None, end=None):
+        self.start = start
+        self.end = end
         self.saved_paths = listdir_fullpath(ROOT_PATH + "/Saved_Frames/")
         self.saved_paths = sorted(self.saved_paths, key=lambda x: int(x.split("_")[-1].split(".")[0]))
+        if (self.start is not None) and (self.end is not None):
+            self.saved_paths = self.saved_paths[self.start:self.end]
         self.idx = 0
 
     def __len__(self):  # Run
