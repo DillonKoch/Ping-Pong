@@ -64,6 +64,6 @@ if __name__ == '__main__':
     x = FrameSaver()
     self = x
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"
-    frame_start = 3000
-    frame_end = 6000
+    frame_start = 2400
+    frame_end = 3000
     x.run(vid_path, frame_start, frame_end)

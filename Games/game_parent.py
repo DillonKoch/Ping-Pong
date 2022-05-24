@@ -886,7 +886,7 @@ class GameParent:
 
             assert cv2.imwrite(ROOT_PATH + f"/Temp/{self.saved_start + i}.png", img)
 
-    def run_game_data(self, vid_path, load_saved_frames=False):  # Run
+    def run_game_data(self, vid_path, load_saved_frames=False, save=True):  # Run
         output = self.blank_output()
         stream, num_frames = self.load_video(vid_path, load_saved_frames)
 
@@ -917,7 +917,8 @@ class GameParent:
         output = self.detect_net_hits(output)
         # output = self.detect_arcs_interpolated(output)
 
-        self.save_output_imgs(output, vid_path, load_saved_frames)
+        if save:
+            self.save_output_imgs(output, vid_path, load_saved_frames)
 
 
 if __name__ == '__main__':
