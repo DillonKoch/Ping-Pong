@@ -29,7 +29,7 @@ if ROOT_PATH not in sys.path:
 
 from Utilities.load_functions import clear_temp_folder
 from Utilities.frame_reader import FrameReader
-from Utilities.viz_functions import show_table, draw_contours, show_ball_center, show_event_box, show_arc_dots, show_arc_line
+from Utilities.viz_functions import show_table, draw_contours, show_ball_center, show_event_box, show_arc_dots, show_arc_line, show_arc_dots_centers, show_extrapolated_arc_centers
 
 
 class GameParent:
@@ -135,6 +135,8 @@ class GameParent:
         and a list of all the contours in the difference frame
         """
         diff = self._frame_diff(frame1, frame2)
+        diff[336:535, 1080:1400] = 0
+        diff[372:545, 360:660] = 0
         raw_contours = self._find_contours(diff)
         contours = self._contour_lists(raw_contours)
         return diff, contours
@@ -156,7 +158,8 @@ class GameParent:
                   "Interpolated Arc Center": {},
                   "Interpolated Events": {},
                   "Final Ball Center": {},
-                  "Contours Near Net": {}}
+                  "Contours Near Net": {},
+                  "Extrapolated Arc Centers": []}
         return output
 
     def load_video(self, vid_path, load_saved_frames):  # Top Level
@@ -527,7 +530,6 @@ class GameParent:
                 print('here')
             current_center_x = self._contour_l_center(output['Cleaned Ball Contours'][current_idx])[0]
             if moving_right is None:
-                # moving_right = (current_center_x + 10) > prev_center_x
                 moving_right = (current_center_x) > prev_center_x
                 pos_match = True
             else:
@@ -552,9 +554,17 @@ class GameParent:
         output['Raw Arcs'] = arcs
         return output
 
+    def _gap_near_bounce(self, gap_start, gap_end, output):  # Helping Helper _interpolate_gap
+        for i in range(gap_start - 10, gap_end + 10):
+            if i in output['Raw Events']:
+                if output['Raw Events'][i] == 'Bounce':
+                    return True
+        return False
+
     def _interpolate_gap(self, output, gap_start, gap_end, model_x, model_y, prev_model_x, prev_model_y):  # Specific Helper interpolate_ball
         hit_intersection = False
         prev_above = None
+        near_bounce = self._gap_near_bounce(gap_start, gap_end, output)
         for i in range(gap_start, gap_end + 1):
             prev_x = prev_model_x(i)
             prev_y = prev_model_y(i)
@@ -563,9 +573,9 @@ class GameParent:
 
             # * update prev above
             if prev_above is None:
-                prev_above = prev_y < y
+                prev_above = prev_y - (10 * (not near_bounce)) < y
             if not hit_intersection:
-                if prev_above != (prev_y < y):
+                if prev_above != (prev_y - (10 * (not near_bounce)) < y):
                     hit_intersection = True
 
             # * update output
@@ -574,6 +584,15 @@ class GameParent:
             else:
                 output['Interpolated Event Center'][i] = (prev_x, prev_y)
 
+        return output
+
+    def _extrapolate_arc(self, output, arc, model_x, model_y):  # Specific Helper interpolate_ball_events
+        extrapolated_centers_dict = {}
+        for i in range(arc[0] - 25, arc[1] + 25):
+            x = model_x(i)
+            y = model_y(i)
+            extrapolated_centers_dict[i] = (x, y)
+        output['Extrapolated Arc Centers'].append(extrapolated_centers_dict)
         return output
 
     def interpolate_ball_events(self, output):  # Top Level
@@ -592,20 +611,23 @@ class GameParent:
             # TODO detect if it's moving right or left before/after gap, find right
             # TODO n points to fit the two curves on, fit the curves, extend until they meet
             # TODO whichever curve is higher is the one that I'll use for each x coordinate
-            prev_arc_t = prev_arc_idxs[-5:]
+            prev_arc_t = prev_arc_idxs[-15000:]
             prev_arc_xy = [self._contour_l_center(output['Cleaned Ball Contours'][idx]) for idx in prev_arc_t]
             prev_arc_x = [xy[0] for xy in prev_arc_xy]
             prev_arc_y = [xy[1] for xy in prev_arc_xy]
             prev_model_y = np.poly1d(np.polyfit(prev_arc_t, prev_arc_y, 2))
             prev_model_x = np.poly1d(np.polyfit(prev_arc_t, prev_arc_x, 2))
 
-            arc_t = arc_idxs[:5]
+            arc_t = arc_idxs[:150000]
             arc_xy = [self._contour_l_center(output['Cleaned Ball Contours'][idx]) for idx in arc_t]
             arc_x = [xy[0] for xy in arc_xy]
             arc_y = [xy[1] for xy in arc_xy]
             model_y = np.poly1d(np.polyfit(arc_t, arc_y, 2))
             model_x = np.poly1d(np.polyfit(arc_t, arc_x, 2))
             output = self._interpolate_gap(output, gap_start, gap_end, model_x, model_y, prev_model_x, prev_model_y)
+            if i == 0:
+                output = self._extrapolate_arc(output, prev_arc, prev_model_x, prev_model_y)
+            output = self._extrapolate_arc(output, arc, model_x, model_y)
 
         return output
 
@@ -735,10 +757,6 @@ class GameParent:
         output['Interpolated Events'] = new_event_dict
         return output
 
-    def detect_serves(self, output):  # Top Level
-        # a serve is the first frame a ball appears after n frames of no ball
-        return output
-
     def _find_contours_near_net(self, all_contours, table):  # Specific Helper detect_net_hits
         contours_near_net = []
         net_area = table[1] + ((table[7] - table[1]) / 2)
@@ -769,6 +787,66 @@ class GameParent:
                 output['Interpolated Events'][hit_idx] = "Net Hit"
                 last15 = [None] * 15
 
+        return output
+
+    def detect_arcs_interpolated(self, output):  # Top Level
+        ball_idxs = sorted(list(output['Final Ball Center'].keys()) + list(output['Interpolated Event Center'].keys()))
+
+        arcs = []
+        prev_idx = ball_idxs.pop(0)
+        prev_center_x = output['Final Ball Center'][prev_idx][0] if prev_idx in output['Final Ball Center'] else output['Interpolated Event Center'][prev_idx][0]
+
+        current_arc = [prev_idx, None]
+        moving_right = None
+        while len(ball_idxs) > 0:
+            current_idx = ball_idxs.pop(0)
+            current_center_x = output['Final Ball Center'][current_idx][0] if prev_idx in output['Final Ball Center'] else output['Interpolated Event Center'][current_idx][0]
+            if moving_right is None:
+                moving_right = current_center_x > prev_center_x
+                pos_match = True
+            else:
+                buffer = 10 if moving_right else -10
+                pos_match = moving_right == ((current_center_x + buffer) > prev_center_x)
+
+            idx_match = (prev_idx + 6) > current_idx
+
+            if current_idx in output['Interpolated Events'] and output['Interpolated Events'][current_idx] == "Bounce":
+                arcs.append(current_arc)
+                current_arc = [current_idx, None]
+                moving_right = None
+            elif idx_match and pos_match:
+                current_arc[1] = current_idx
+            else:
+                arcs.append(current_arc)
+                current_arc = [current_idx, None]
+                moving_right = None
+
+            prev_center_x = current_center_x
+            prev_idx = current_idx
+
+        arcs.append(current_arc)
+        arcs = [arc for arc in arcs if not (None in arc)]
+        output['Interpolated Arcs'] = arcs
+        return output
+
+    def detect_arcs_interpolated(self, output):  # Top Level
+        arcs = []
+        current_arc = [None, None]
+        ball_idxs = sorted(list(output['Final Ball Center'].keys()) + list(output['Interpolated Event Center'].keys()))
+
+        for ball_idx in ball_idxs:
+            if ball_idx in output['Interpolated Events'] and output['Interpolated Events'][ball_idx] in ['Bounce', 'Hit']:
+                current_arc[1] = ball_idx
+                arcs.append(current_arc)
+                current_arc = [None, None]
+            else:
+                if current_arc[0] is None:
+                    current_arc[0] = ball_idx
+                current_arc[1] = ball_idx
+
+        arcs.append(current_arc)
+        arcs = [arc for arc in arcs if not (None in arc)]
+        output['Interpolated Arcs'] = arcs
         return output
 
     def _far_idxs(self, num, idx):
@@ -824,12 +902,13 @@ class GameParent:
         show_ball_centers = False
         run_show_arc_dots_raw = False
         run_show_arc_lines_raw = False
-        run_show_arc_dots_interp = True
-        run_show_arc_lines_interp = False
         show_events_interp = True
-        show_final_centers = True
-        show_interp_event_center = False
         show_interp_arc_center = False
+        run_show_extrapolated_arc_centers = False
+
+        show_final_centers = False
+        show_interp_event_center = False
+        run_show_arc_dots_interp = True
 
         # * SETTING UP THE LOOP THROUGH FRAMES
         clear_temp_folder()
@@ -881,10 +960,13 @@ class GameParent:
 
             img = show_arc_dots(img, output, i) if run_show_arc_dots_raw else img
             img = show_arc_line(img, output, i) if run_show_arc_lines_raw else img
-            img = show_arc_dots(img, output, i, arc_type="Interpolated Arcs") if run_show_arc_dots_interp else img
-            img = show_arc_line(img, output, i, arc_type="Interpolated Arcs") if run_show_arc_lines_interp else img
+            # img = show_arc_dots(img, output, i, arc_type="Interpolated Arcs") if run_show_arc_dots_interp else img
+            # img = show_arc_line(img, output, i, arc_type="Interpolated Arcs") if run_show_arc_lines_interp else img
+            img = show_arc_dots_centers(img, output, i) if run_show_arc_dots_interp else img
 
-            assert cv2.imwrite(ROOT_PATH + f"/Temp/{self.saved_start + i}.png", img)
+            img = show_extrapolated_arc_centers(img, output, i) if run_show_extrapolated_arc_centers else img
+
+            assert cv2.imwrite(ROOT_PATH + f"/Temp/{self.saved_start + self.frame_start + i}.png", img)
 
     def run_game_data(self, vid_path, load_saved_frames=False, save=True):  # Run
         output = self.blank_output()
@@ -913,18 +995,17 @@ class GameParent:
         output = self.detect_bounces_interpolated(output)  # ! output['Final Ball Center'] --> output['Interpolated Events']
         output = self.detect_hits(output)  # ! output['Final Ball Center'] --> output['Interpolated Events']
         output = self.clean_hit_bounce_duplicates(output)
-        # output = self.detect_serves(output)
         output = self.detect_net_hits(output)
-        # output = self.detect_arcs_interpolated(output)
+        output = self.detect_arcs_interpolated(output)
 
         if save:
             self.save_output_imgs(output, vid_path, load_saved_frames)
 
 
 if __name__ == '__main__':
-    saved_start = 3000
+    saved_start = 2400
     frame_start = 0
-    frame_end = 4000
+    frame_end = 600
     x = GameParent(frame_start, frame_end, saved_start)
     self = x
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"

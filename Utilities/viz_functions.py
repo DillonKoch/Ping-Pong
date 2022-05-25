@@ -124,6 +124,17 @@ def show_arc_dots(img, output, i, arc_type='Raw Arcs'):  # Run
     return img
 
 
+def show_arc_dots_centers(img, output, i, arc_type='Interpolated Arcs'):  # Run
+    img = img_to_color(img)
+    for arc in output[arc_type]:
+        if arc[0] <= i <= arc[1]:
+            for j in range(arc[0], arc[1] + 1):
+                if j in output['Final Ball Center'] or j in output['Interpolated Event Center']:
+                    center = output['Final Ball Center'][j] if j in output['Final Ball Center'] else output['Interpolated Event Center'][j]
+                    img = cv2.circle(img, (int(center[0]), int(center[1])), 3, (0, 0, 255), -1)
+    return img
+
+
 def show_arc_line(img, output, i, arc_type='Raw Arcs'):  # Run
     img = img_to_color(img)
     for arc in output[arc_type]:
@@ -142,4 +153,14 @@ def show_arc_line(img, output, i, arc_type='Raw Arcs'):  # Run
             pts = np.array([[x, y] for x, y in zip(plot_x, plot_y)], dtype=int)
             pts = pts.reshape((-1, 1, 2))
             img = cv2.polylines(img, [pts], False, (0, 255, 0), 2)
+    return img
+
+
+def show_extrapolated_arc_centers(img, output, i):
+    arc_dicts = output['Extrapolated Arc Centers']
+    for arc_dict in arc_dicts:
+        arc_idxs = sorted(list(arc_dict.keys()))
+        if arc_idxs[0] <= i <= arc_idxs[-1]:
+            for arc_idx in arc_idxs:
+                img = cv2.circle(img, (int(arc_dict[arc_idx][0]), int(arc_dict[arc_idx][1])), 3, (255, 0, 0), -1)
     return img
