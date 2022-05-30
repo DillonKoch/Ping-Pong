@@ -113,13 +113,23 @@ def show_ball_center(img, center, color=(255, 0, 0)):  # Run
     return img
 
 
-def show_arc_dots(img, output, i, arc_type='Raw Arcs'):  # Run
+# def show_arc_dots(img, output, i, arc_type='Raw Arcs'):  # Run
+#     img = img_to_color(img)
+#     for arc in output[arc_type]:
+#         if arc[0] <= i <= arc[1]:
+#             for j in range(arc[0], arc[1] + 1):
+#                 if j in output['Cleaned Ball Contours']:
+#                     c_x, c_y = contour_l_center(output['Cleaned Ball Contours'][j])
+#                     img = cv2.circle(img, (int(c_x), int(c_y)), 3, (0, 0, 255), -1)
+#     return img
+
+def show_arc_dots(img, data, frame_idx, arc_name, centers_name):  # Run
     img = img_to_color(img)
-    for arc in output[arc_type]:
-        if arc[0] <= i <= arc[1]:
+    for arc in data[arc_name]:
+        if arc[0] <= frame_idx <= arc[1]:
             for j in range(arc[0], arc[1] + 1):
-                if j in output['Cleaned Ball Contours']:
-                    c_x, c_y = contour_l_center(output['Cleaned Ball Contours'][j])
+                if j in data[centers_name]:
+                    c_x, c_y = data[centers_name][j]
                     img = cv2.circle(img, (int(c_x), int(c_y)), 3, (0, 0, 255), -1)
     return img
 

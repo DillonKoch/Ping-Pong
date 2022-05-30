@@ -1001,6 +1001,19 @@ class GameParent:
         if save:
             self.save_output_imgs(output, vid_path, load_saved_frames)
 
+    def run(self, vid_path, load_saved_frames=False, save=True):  # Run
+        output = self.blank_output()
+        stream, num_frames = self.load_video(vid_path, load_saved_frames)
+
+        # ! LOOPING OVER EACH FRAME
+        window = [None] + [stream.read() for _ in range(59)]
+        for i in tqdm(range(59, num_frames)):
+            window = window[1:] + [stream.read()]
+
+            output = self.detect_table(output, window[-1], i)  # ! output['Table']
+            output = self.find_ball(output, window[-2], window[-1], i)  # ! output['Raw Ball Contours']
+            output = self.backtrack_ball(output, window, i)  # ! adding output['Backtracked Ball Contours'] to output['Raw Ball Contours']
+
 
 if __name__ == '__main__':
     saved_start = 2400
