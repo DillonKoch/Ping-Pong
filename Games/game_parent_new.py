@@ -19,8 +19,8 @@ from os.path import abspath, dirname
 
 import cv2
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
-
 
 ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
@@ -31,7 +31,7 @@ from Utilities.load_functions import clear_temp_folder
 from Utilities.viz_functions import (draw_contours, show_arc_dots,
                                      show_arc_dots_centers, show_arc_line,
                                      show_ball_center, show_event_box,
-                                     show_extrapolated_arc_centers, show_table)
+                                     show_extrapolated_arc_centers, show_table, show_frame_num)
 
 
 class GameParent:
@@ -205,9 +205,8 @@ class GameParent:
         # TODO run the actual segmentation model and approximate 4 contours
         table = [1006, 336, 818, 516, 830, 1352, 1024, 1540]
         output['Table'][frame_idx] = table
-        if frame_idx < 100:
-            for i in range(100):
-                output['Table'][i] = table
+        for i in range(frame_idx - 100, frame_idx):
+            output['Table'][i] = table
         return output
 
     def _find_ball_neighbor(self, frame_1_ball, contours):  # Specific Helper find_ball
@@ -906,17 +905,35 @@ class GameParent:
                 arcs.append(current_arc)
                 current_arc = [None, None]
             elif ball_idx in data['Phase 4 - Events'] and data['Phase 4 - Events'][ball_idx] == 'Net Hit':
+                # max_dist_after_hit = 0
+                # for i in range(ball_idx + 1, ball_idx + 15):
+                #     if i in data['Phase 3 - Ball - Final Ball Centers']:
+                #         dist = abs(data['Phase 3 - Ball - Final Ball Centers'][i][0] - net_hit_x)
+                #         if dist > max_dist_after_hit:
+                #             max_dist_after_hit = dist
+                # if max_dist_after_hit < 120:
+                #     current_arc[1] = ball_idx
+                #     arcs.append(current_arc)
+                #     current_arc = [None, None]
+                # ! check if ball moves in the right direction, and if it's on the right side of the net
                 net_hit_x = data['Phase 3 - Ball - Final Ball Centers'][ball_idx][0]
-                max_dist_after_hit = 0
+                current_arc_x_start = data['Phase 3 - Ball - Final Ball Centers'][current_arc[0]][0]
+                current_arc_x_end = data['Phase 3 - Ball - Final Ball Centers'][current_arc[1]][0]
+                moving_right = current_arc_x_start < current_arc_x_end
+                after_net_moving_right = []
+                prev_x = net_hit_x
                 for i in range(ball_idx + 1, ball_idx + 15):
                     if i in data['Phase 3 - Ball - Final Ball Centers']:
-                        dist = abs(data['Phase 3 - Ball - Final Ball Centers'][i][0] - net_hit_x)
-                        if dist > max_dist_after_hit:
-                            max_dist_after_hit = dist
-                if max_dist_after_hit < 120:
+                        x = data['Phase 3 - Ball - Final Ball Centers'][i][0]
+                        after_net_moving_right.append(x > prev_x)
+                        prev_x = x
+
+                direction_match = moving_right == sum(after_net_moving_right) > 8
+                if direction_match:
                     current_arc[1] = ball_idx
                     arcs.append(current_arc)
                     current_arc = [None, None]
+
             else:
                 if current_arc[0] is None:
                     current_arc[0] = ball_idx
@@ -996,12 +1013,14 @@ class GameParent:
         save_phase_2 = False
         save_phase_3 = False
         save_phase_4 = True
+        run_show_frame_num = True
 
         # * setting up the looping through frames
         clear_temp_folder()
         stream, num_frames = self.load_video(vid_path, load_saved_frames)
+        num_frames += self.saved_start + self.frame_start
         frame = stream.read()
-        for i in tqdm(range(1, num_frames)):
+        for i in tqdm(range(1 + self.saved_start + self.frame_start, num_frames)):
             prev_frame = frame
             frame = stream.read()
             diff, _ = self._frame_diff_contours(prev_frame, frame)
@@ -1011,16 +1030,18 @@ class GameParent:
             img = self._annotate_phase_2(img, data, i) if save_phase_2 else img
             img = self._annotate_phase_3(img, data, i) if save_phase_3 else img
             img = self._annotate_phase_4(img, data, i) if save_phase_4 else img
+            img = show_frame_num(img, i) if run_show_frame_num else img
 
-            assert cv2.imwrite(ROOT_PATH + f"/Temp/{self.saved_start + self.frame_start + i}.png", img)
+            assert cv2.imwrite(ROOT_PATH + f"/Temp/{i}.png", img)
 
     def run_game_data(self, vid_path, load_saved_frames, save=True):  # Run
         data = self.blank_data()
         stream, num_frames = self.load_video(vid_path, load_saved_frames)
+        num_frames += self.saved_start + self.frame_start
 
         # * LOOPING OVER EACH FRAME
         window = [None] + [stream.read() for _ in range(59)]
-        for i in tqdm(range(59, num_frames)):
+        for i in tqdm(range(59 + self.saved_start + self.frame_start, num_frames)):
             window = window[1:] + [stream.read()]
 
             # * PHASE 1: detecting ball (classic, neighbor, backtracked)

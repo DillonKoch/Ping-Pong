@@ -17,6 +17,7 @@ from os.path import abspath, dirname
 
 import cv2
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
@@ -174,3 +175,11 @@ def show_extrapolated_arc_centers(img, output, i):
             for arc_idx in arc_idxs:
                 img = cv2.circle(img, (int(arc_dict[arc_idx][0]), int(arc_dict[arc_idx][1])), 3, (255, 0, 0), -1)
     return img
+
+
+def show_frame_num(img, frame_num):  # Run
+    img = Image.fromarray(img)
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.truetype(ROOT_PATH + '/Games/score_font.ttf', 20)
+    draw.text((10, 10), str(frame_num), (255, 255, 255), font=font)
+    return np.array(img)

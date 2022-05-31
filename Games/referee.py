@@ -28,6 +28,7 @@ if ROOT_PATH not in sys.path:
 
 
 from Utilities.load_functions import clear_temp_folder, load_pickle
+from Utilities.viz_functions import show_frame_num
 
 from Games.game_parent_new import GameParent
 
@@ -383,6 +384,7 @@ class Referee(GameParent):
         incoming_winner = None
 
         stream, num_frames = self.load_video(vid_path, load_saved_frames)
+        num_frames += self.saved_start + self.frame_start
         if make_video:
             output_params = {"-input_framerate": 120}
             writer = WriteGear(output_filename="output.mp4", **output_params)
@@ -391,7 +393,7 @@ class Referee(GameParent):
         over_arcs = self.find_over_arcs(data)
         net_arcs = self.find_net_arcs(data, over_arcs)
 
-        for frame_idx in tqdm(range(num_frames)):
+        for frame_idx in tqdm(range(self.saved_start + self.frame_start, num_frames)):
             frame = stream.read()
 
             if frames_until_point_over > 0:
@@ -431,6 +433,7 @@ class Referee(GameParent):
                 in_play = self.check_point_start(over_arcs, net_arcs, frame_idx)
 
             frame = self.add_scoreboard(frame, in_play, hits, rally_n_frames, p1_win_frames_left, p2_win_frames_left)
+            frame = show_frame_num(frame, frame_idx)
             p1_win_frames_left = max(0, p1_win_frames_left - 1)
             p2_win_frames_left = max(0, p2_win_frames_left - 1)
             # assert cv2.imwrite(ROOT_PATH + f"/Temp/{self.saved_start + self.frame_start + i}.png", frame)
@@ -442,8 +445,8 @@ class Referee(GameParent):
 
 if __name__ == '__main__':
     saved_start = 2400
-    frame_start = 8000
-    frame_end = 9000
+    frame_start = 2400 - saved_start
+    frame_end = 12000 - saved_start
     x = Referee(frame_start, frame_end, saved_start)
     self = x
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"
