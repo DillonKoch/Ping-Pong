@@ -6,6 +6,8 @@
 *.tmp
 *.pickle
 *wandb/
+.vscode
+wandb
 
 
 # Byte-compiled / optimized / DLL files

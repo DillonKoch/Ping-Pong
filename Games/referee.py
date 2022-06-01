@@ -361,10 +361,12 @@ class Referee(GameParent):
         return False
 
     def check_double_bounce(self, data, frame_idx):  # Top Level
-        for i in range(200):
+        for i in range(1, 100):
             if frame_idx + i in data['Phase 4 - Events']:
                 if data['Phase 4 - Events'][frame_idx + i] == 'Bounce':
                     return i
+                else:
+                    return 0
         return 0
 
     def check_ball_not_returned(self, over_arcs, net_arcs, frame_idx):  # Top Level
@@ -389,7 +391,7 @@ class Referee(GameParent):
             output_params = {"-input_framerate": 120}
             writer = WriteGear(output_filename="output.mp4", **output_params)
 
-        data = self.run_game_data(vid_path, load_saved_frames, save=True) if pickle_path is None else load_pickle(pickle_path)
+        data = self.run_game_data(vid_path, load_saved_frames, save=False) if pickle_path is None else load_pickle(pickle_path)
         over_arcs = self.find_over_arcs(data)
         net_arcs = self.find_net_arcs(data, over_arcs)
 
@@ -411,6 +413,7 @@ class Referee(GameParent):
                     incoming_winner = None
 
             elif in_play:
+                # TODO add detector for hitting the ball back down on the table
                 rally_n_frames += 1
                 if self.over_arc_start(over_arcs, frame_idx):
                     hits += 1
@@ -446,11 +449,11 @@ class Referee(GameParent):
 if __name__ == '__main__':
     saved_start = 2400
     frame_start = 2400 - saved_start
-    frame_end = 12000 - saved_start
+    frame_end = 100009000 - saved_start
     x = Referee(frame_start, frame_end, saved_start)
     self = x
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"
-    load_saved_frames = True
+    load_saved_frames = False
     # pickle_path = ROOT_PATH + "/Games/output.pickle"
     pickle_path = None
     make_video = True

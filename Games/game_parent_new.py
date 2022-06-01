@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
+from vidgear.gears import CamGear, WriteGear
 
 ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
@@ -31,7 +32,8 @@ from Utilities.load_functions import clear_temp_folder
 from Utilities.viz_functions import (draw_contours, show_arc_dots,
                                      show_arc_dots_centers, show_arc_line,
                                      show_ball_center, show_event_box,
-                                     show_extrapolated_arc_centers, show_table, show_frame_num)
+                                     show_extrapolated_arc_centers,
+                                     show_frame_num, show_table)
 
 
 class GameParent:
@@ -780,7 +782,7 @@ class GameParent:
         bounce_idxs = [idx for idx in event_idxs if data["Phase 4 - Events"][idx] == "Bounce"]
         for bounce_idx in bounce_idxs:
             overlaps_hit = False
-            for i in range(bounce_idx - 10, bounce_idx + 10):
+            for i in range(bounce_idx - 5, bounce_idx + 5):
                 if i in hit_idxs:
                     overlaps_hit = True
             if not overlaps_hit:
@@ -814,6 +816,28 @@ class GameParent:
         data['Phase 4 - Events'] = new_event_dict
         return data
 
+    def clean_net_hit_bounce_duplicates(self, data):  # Top Level
+        new_event_dict = {}
+        event_idxs = sorted(list(data['Phase 4 - Events'].keys()))
+        hit_idxs = [idx for idx in event_idxs if data["Phase 4 - Events"][idx] == "Hit"]
+        net_hit_idxs = [idx for idx in event_idxs if data["Phase 4 - Events"][idx] == "Net Hit"]
+        bounce_idxs = [idx for idx in event_idxs if data["Phase 4 - Events"][idx] == "Bounce"]
+        for bounce_idx in bounce_idxs:
+            overlaps_net_hit = False
+            for i in range(bounce_idx - 10, bounce_idx + 10):
+                if i in net_hit_idxs:
+                    overlaps_net_hit = True
+            if not overlaps_net_hit:
+                new_event_dict[bounce_idx] = "Bounce"
+
+        for net_hit_idx in net_hit_idxs:
+            new_event_dict[net_hit_idx] = "Net Hit"
+        for hit_idx in hit_idxs:
+            new_event_dict[hit_idx] = "Hit"
+
+        data['Phase 4 - Events'] = new_event_dict
+        return data
+
     def _find_contours_near_net(self, all_contours, table):  # Specific Helper detect_net_hits
         contours_near_net = []
         net_area = table[1] + ((table[7] - table[1]) / 2)
@@ -834,8 +858,12 @@ class GameParent:
             net_moving.append((frame_idx, 1080 > abs(min_y - max_y) > 100))
 
         last15 = [None] * 15
+        skip_frames = 0
         for frame_idx, net_moving in net_moving:
-            if net_moving:
+            if skip_frames > 0:
+                skip_frames -= 1
+                continue
+            elif net_moving:
                 last15 = last15[1:] + [True]
             else:
                 last15 = last15[1:] + [False]
@@ -843,6 +871,7 @@ class GameParent:
                 hit_idx = frame_idx - (15 - last15.index(True))
                 data['Phase 4 - Events'][hit_idx] = "Net Hit"
                 last15 = [None] * 15
+                skip_frames = 150
 
         return data
 
@@ -917,8 +946,8 @@ class GameParent:
                 #     current_arc = [None, None]
                 # ! check if ball moves in the right direction, and if it's on the right side of the net
                 net_hit_x = data['Phase 3 - Ball - Final Ball Centers'][ball_idx][0]
-                current_arc_x_start = data['Phase 3 - Ball - Final Ball Centers'][current_arc[0]][0]
-                current_arc_x_end = data['Phase 3 - Ball - Final Ball Centers'][current_arc[1]][0]
+                current_arc_x_start = data['Phase 3 - Ball - Final Ball Centers'][current_arc[0]][0] if current_arc[0] is not None else net_hit_x
+                current_arc_x_end = data['Phase 3 - Ball - Final Ball Centers'][current_arc[1]][0] if current_arc[1] is not None else net_hit_x
                 moving_right = current_arc_x_start < current_arc_x_end
                 after_net_moving_right = []
                 prev_x = net_hit_x
@@ -1066,6 +1095,7 @@ class GameParent:
         data = self.clean_hit_bounce_duplicates(data)
         data = self.detect_net_hits(data)
         data = self.clean_hit_net_hit_duplicates(data)
+        data = self.clean_net_hit_bounce_duplicates(data)
         data = self.detect_arcs_interpolated(data)
         data = self.detect_missing_events(data)
 
