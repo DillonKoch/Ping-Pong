@@ -8,6 +8,8 @@
 *wandb/
 .vscode
 wandb
+!/Misc/*
+
 
 
 # Byte-compiled / optimized / DLL files
