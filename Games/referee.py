@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
-from vidgear.gears import WriteGear
+# from vidgear.gears import WriteGear
 
 ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
@@ -30,32 +30,15 @@ if ROOT_PATH not in sys.path:
 from Utilities.load_functions import clear_temp_folder, load_pickle
 from Utilities.viz_functions import show_frame_num
 
-from Games.game_parent_new import GameParent
+from Games.game_parent import GameParent
 
 
 class Referee(GameParent):
     def __init__(self, frame_start, frame_end, saved_start):
         super(Referee, self).__init__(frame_start, frame_end, saved_start)
 
-        # * player 1 stats
         self.player1_score = 0
-        # self.player1_serves = 0
-        # self.player1_net_hits = 0
-        # self.player1_missed_table = 0
-        # self.player1_double_bounce = 0
-
-        # * player 2 stats
         self.player2_score = 0
-        # self.player2_serves = 0
-        # self.player2_net_hits = 0
-        # self.player2_missed_table = 0
-        # self.player2_double_bounce = 0
-
-        # * game stats
-        # self.longest_rally_time = None
-        # self.longest_rally_hits = 0
-
-        # * Other
         self.font_path = ROOT_PATH + "/Games/score_font.ttf"
 
     def _frame_draw_font(self, frame, font_size):  # Global Helper
@@ -376,7 +359,7 @@ class Referee(GameParent):
                 return 0
         return 100
 
-    def run_referee(self, vid_path, load_saved_frames, pickle_path=None, make_video=False):  # Run
+    def run_referee(self, vid_path, load_saved_frames, pickle_path=None, make_video=False, save_ref_frames=False):  # Run
         in_play = False
         p1_win_frames_left = 0
         p2_win_frames_left = 0
@@ -391,7 +374,7 @@ class Referee(GameParent):
             output_params = {"-input_framerate": 120}
             writer = WriteGear(output_filename="output.mp4", **output_params)
 
-        data = self.run_game_data(vid_path, load_saved_frames, save=False) if pickle_path is None else load_pickle(pickle_path)
+        data = self.run_game_data(vid_path, load_saved_frames, save=True) if pickle_path is None else load_pickle(pickle_path)
         over_arcs = self.find_over_arcs(data)
         net_arcs = self.find_net_arcs(data, over_arcs)
 
@@ -442,6 +425,8 @@ class Referee(GameParent):
             # assert cv2.imwrite(ROOT_PATH + f"/Temp/{self.saved_start + self.frame_start + i}.png", frame)
             if make_video:
                 writer.write(frame)
+            if save_ref_frames:
+                assert cv2.imwrite(ROOT_PATH + f"/Ref_Frames/{frame_idx}.png", frame)
         if make_video:
             writer.close()
 
@@ -449,12 +434,13 @@ class Referee(GameParent):
 if __name__ == '__main__':
     saved_start = 2400
     frame_start = 2400 - saved_start
-    frame_end = 100009000 - saved_start
+    frame_end = 3000 - saved_start
     x = Referee(frame_start, frame_end, saved_start)
     self = x
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"
-    load_saved_frames = False
+    load_saved_frames = True
     # pickle_path = ROOT_PATH + "/Games/output.pickle"
     pickle_path = None
-    make_video = True
-    x.run_referee(vid_path, load_saved_frames=load_saved_frames, pickle_path=pickle_path, make_video=make_video)
+    make_video = False
+    save_ref_frames = True
+    x.run_referee(vid_path, load_saved_frames=load_saved_frames, pickle_path=pickle_path, make_video=make_video, save_ref_frames=save_ref_frames)

@@ -153,13 +153,14 @@ def show_arc_line(img, output, i, arc_type='Raw Arcs'):  # Run
             x = []
             y = []
             for j in range(arc[0], arc[1]):
-                if j in output['Cleaned Ball Contours']:
-                    c_x, c_y = contour_l_center(output['Cleaned Ball Contours'][j])
+                if j in output['Phase 2 - Ball - Cleaned Contours']:
+                    c_x, c_y = contour_l_center(output['Phase 2 - Ball - Cleaned Contours'][j])
+                    # c_x, c_y = j
                     x.append(c_x)
                     y.append(c_y)
 
             model = np.poly1d(np.polyfit(x, y, 2))
-            plot_x = np.linspace(min(x), max(x), 200)
+            plot_x = np.linspace(min(x) - 200, max(x) + 200, 200)
             plot_y = model(plot_x)
             pts = np.array([[x, y] for x, y in zip(plot_x, plot_y)], dtype=int)
             pts = pts.reshape((-1, 1, 2))
@@ -178,6 +179,7 @@ def show_extrapolated_arc_centers(img, output, i):
 
 
 def show_frame_num(img, frame_num):  # Run
+    img = img_to_color(img)
     img = Image.fromarray(img)
     draw = ImageDraw.Draw(img)
     font = ImageFont.truetype(ROOT_PATH + '/Games/score_font.ttf', 20)
