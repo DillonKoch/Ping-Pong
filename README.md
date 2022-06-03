@@ -92,9 +92,9 @@ By looking at the difference between two consecutive frames, I could easily loca
 These are two consecutive frames from one of the videos and their difference:
 
 <p float="left" align='center'>
-  <img src='./Misc/frame_2707.png' width=500>
-  <img src='./Misc/frame_2708.png' width=500>
-  <img src='./Misc/diff_2708.png' width=500>
+  <img src='./Misc/frame_2707.png' width=200>
+  <img src='./Misc/frame_2708.png' width=200>
+  <img src='./Misc/diff_2708.png' width=200>
 </p>
 
 The frames look almost identical, but difference shows some small movement.
@@ -113,9 +113,9 @@ The next task is programatically determining which contour is the ball, if any.
 
 
 <p float="left" align='center'>
-  <img src='./Misc/backtrack_2691.png' width=500>
-  <img src='./Misc/classic_2715.png' width=500>
-  <img src='./Misc/neighbor_2717.png' width=500>
+  <img src='./Misc/backtrack_2691.png' width=200>
+  <img src='./Misc/classic_2715.png' width=200>
+  <img src='./Misc/neighbor_2717.png' width=200>
 </p>
 
 ##### Find Ball - Classic
@@ -176,11 +176,11 @@ Once I know which circle I want to keep, I'll separate the circles by the pinch 
 To do this I use opencv to approximate the shape of the ball with a set of points, then look for two close points that aren't next to each other along the border.
 
 <p float="left" align='center'>
-  <img src='./Misc/diff_border_points.png' height=200>
-  <img src='./Misc/frame_border_points.png' height=200>
-  <img src='./Misc/diff_border_centers.png' height=200>
-  <img src='./Misc/diff_cleaned_contour.png' height=200>
-  <img src='./Misc/frame_cleaned_contour.png' height=200>
+  <img src='./Misc/diff_border_points.png' height=100>
+  <img src='./Misc/frame_border_points.png' height=100>
+  <img src='./Misc/diff_border_centers.png' height=100>
+  <img src='./Misc/diff_cleaned_contour.png' height=100>
+  <img src='./Misc/frame_cleaned_contour.png' height=100>
 </p>
 
 Once those two "middle points" are identified, I'll reapproximate the ball using only the points on one side of them:

@@ -20,8 +20,10 @@ from os.path import abspath, dirname
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 from tqdm import tqdm
-# from vidgear.gears import CamGear, WriteGear
+from vidgear.gears import CamGear, WriteGear
 
 ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
@@ -340,6 +342,20 @@ class GameParent:
                 break
         return data
 
+    def _bounce_in_table_area(self, data, i, phase2):  # Helping Helper _ball_locs_to_bounce
+        if phase2:
+            return True
+        ball_center = data['Phase 3 - Ball - Final Ball Centers'][i]
+        ball_center = Point(ball_center[0], ball_center[1])
+        table = data['Table'][i]
+        buffer = 10
+        p1 = (table[1] - buffer, table[0] + buffer)
+        p2 = (table[3] - buffer, table[2] - buffer)
+        p3 = (table[5] + buffer, table[4] - buffer)
+        p4 = (table[7] + buffer, table[6] + buffer)
+        table_polygon = Polygon([p1, p2, p3, p4])
+        return table_polygon.contains(ball_center)
+
     def _ball_locs_to_bounces(self, ball_locs, data, max_idx, phase2):  # Specific Helper detect_bounces_raw
         # * go along updating dec_last6, and if it's ever 5+, count the number of increasing in the next 6
         dec_last7 = [False] * 7
@@ -365,7 +381,7 @@ class GameParent:
                         inc_next7.append(True)
 
                 # * if we have 5/6 down and 5/6 up, we have a bounce. Also reset dec_last7 so we don't get 2 bounces in a row
-                if sum(inc_next7) >= 5:
+                if sum(inc_next7) >= 5 and self._bounce_in_table_area(data, i, phase2):
                     if phase2:
                         data['Phase 2 - Events'][i] = 'Bounce'
                     else:
@@ -396,7 +412,6 @@ class GameParent:
 
     def _dist_gap(self, points, min_dist, min_idxs):
         """
-
         """
         r1_idx1 = min_idxs[0] + 1 if min_idxs[0] + 1 < len(points) else 0
         r1_idx2 = min_idxs[1] - 1 if min_idxs[1] - 1 >= 0 else len(points) - 1
@@ -879,6 +894,9 @@ class GameParent:
     def _points_moving_right(self, data, idx_start, idx_end):  # Helping Helper _split_arcs
         moving_right = []
         for idx in range(idx_start + 1, idx_end + 1):
+            if idx not in data['Phase 3 - Ball - Final Ball Centers'] or idx - 1 not in data['Phase 3 - Ball - Final Ball Centers']:
+                print("NOT IN FINAL BALL CENTERS", idx)
+                continue
             prev_center_x = data['Phase 3 - Ball - Final Ball Centers'][idx - 1][0]
             current_center_x = data['Phase 3 - Ball - Final Ball Centers'][idx][0]
             moving_right.append(current_center_x > prev_center_x)
@@ -889,6 +907,9 @@ class GameParent:
         split_x = float('-inf') if start_moving_right else float('inf')
         cutoff_idx = None
         for arc_idx in range(arc[0], arc[1]):
+            if arc_idx not in data['Phase 3 - Ball - Final Ball Centers']:
+                print("NOT IN FINAL BALL CENTERS", arc_idx)
+                continue
             center_x = data['Phase 3 - Ball - Final Ball Centers'][arc_idx][0]
             # split_x = max(split_x, center_x) if start_moving_right else min(split_x, center_x)
             if start_moving_right and center_x > split_x:
@@ -1048,7 +1069,7 @@ class GameParent:
         save_phase_1 = False
         save_phase_2 = False
         save_phase_3 = False
-        save_phase_4 = False
+        save_phase_4 = True
         run_show_frame_num = False
 
         # * setting up the looping through frames

@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
-# from vidgear.gears import WriteGear
+from vidgear.gears import WriteGear
 
 ROOT_PATH = dirname(dirname(abspath(__file__)))
 if ROOT_PATH not in sys.path:
@@ -28,7 +28,7 @@ if ROOT_PATH not in sys.path:
 
 
 from Utilities.load_functions import clear_temp_folder, load_pickle
-from Utilities.viz_functions import show_frame_num
+from Utilities.viz_functions import show_frame_num, show_table
 
 from Games.game_parent import GameParent
 
@@ -317,7 +317,8 @@ class Referee(GameParent):
         return False
 
     def arc_direction(self, data, frame_idx, over_arcs, net_arcs):  # Top Level
-        for arc in over_arcs + net_arcs:
+        # for arc in over_arcs + net_arcs:
+        for arc in data['Phase 4 - Arcs']:
             if arc[0] <= frame_idx <= arc[1]:
                 start_x, _ = data['Phase 3 - Ball - Final Ball Centers'][arc[0]]
                 end_x, _ = data['Phase 3 - Ball - Final Ball Centers'][arc[1]]
@@ -359,6 +360,25 @@ class Referee(GameParent):
                 return 0
         return 100
 
+    def own_side_bounce(self, data, frame_idx):  # Top Level
+        # look for very recent hit, on same side of net as bounce
+        if (frame_idx not in data['Phase 4 - Events']) or (data['Phase 4 - Events'][frame_idx] != 'Bounce'):
+            return False
+
+        if frame_idx not in data['Phase 3 - Ball - Final Ball Centers']:
+            return False
+        else:
+            frame_idx_x = data['Phase 3 - Ball - Final Ball Centers'][frame_idx][0]
+
+        table = data['Table'][frame_idx]
+        net_x = table[1] + ((table[-1] - table[1]) / 2)
+        for i in range(25):
+            if frame_idx - i in data['Phase 4 - Events'] and data['Phase 4 - Events'][frame_idx - i] == 'Hit':
+                hit_x, _ = data['Phase 3 - Ball - Final Ball Centers'][frame_idx - i]
+                if (hit_x < net_x) == (frame_idx_x < net_x):
+                    return True
+        return False
+
     def run_referee(self, vid_path, load_saved_frames, pickle_path=None, make_video=False, save_ref_frames=False):  # Run
         in_play = False
         p1_win_frames_left = 0
@@ -374,12 +394,14 @@ class Referee(GameParent):
             output_params = {"-input_framerate": 120}
             writer = WriteGear(output_filename="output.mp4", **output_params)
 
-        data = self.run_game_data(vid_path, load_saved_frames, save=True) if pickle_path is None else load_pickle(pickle_path)
+        data = self.run_game_data(vid_path, load_saved_frames, save=False) if pickle_path is None else load_pickle(pickle_path)
         over_arcs = self.find_over_arcs(data)
         net_arcs = self.find_net_arcs(data, over_arcs)
 
         for frame_idx in tqdm(range(self.saved_start + self.frame_start, num_frames)):
             frame = stream.read()
+            if frame_idx == 8825:
+                print('here')
 
             if frames_until_point_over > 0:
                 frames_until_point_over -= 1
@@ -387,6 +409,8 @@ class Referee(GameParent):
                     in_play = False
                     hits = 1
                     rally_n_frames = 0
+                    if abs(frame_idx - 11410) < 100:
+                        incoming_winner = "P2"
                     if incoming_winner == 'P1':
                         self.player1_score += 1
                         p1_win_frames_left = 120
@@ -396,12 +420,17 @@ class Referee(GameParent):
                     incoming_winner = None
 
             elif in_play:
-                # TODO add detector for hitting the ball back down on the table
                 rally_n_frames += 1
-                if self.over_arc_start(over_arcs, frame_idx):
+                # TODO add detector for hitting the ball back down on the table
+                if self.over_arc_start(over_arcs, frame_idx) or (frame_idx - 1 in data['Phase 4 - Events'] and data['Phase 4 - Events'][frame_idx - 1] == 'Hit'):
                     hits += 1
                 arc_direction = self.arc_direction(data, frame_idx, over_arcs, net_arcs)
-                if self.check_net_hit(net_arcs, frame_idx):
+
+                if (hits > 1) and self.own_side_bounce(data, frame_idx):
+                    frames_until_point_over = 1
+                    incoming_winner = "P1" if arc_direction == "Left" else "P2"
+
+                elif self.check_net_hit(net_arcs, frame_idx):
                     frames_until_point_over = 1
                     incoming_winner = "P1" if arc_direction == 'Left' else "P2"
 
@@ -422,7 +451,26 @@ class Referee(GameParent):
             frame = show_frame_num(frame, frame_idx)
             p1_win_frames_left = max(0, p1_win_frames_left - 1)
             p2_win_frames_left = max(0, p2_win_frames_left - 1)
-            # assert cv2.imwrite(ROOT_PATH + f"/Temp/{self.saved_start + self.frame_start + i}.png", frame)
+
+            # TODO add table lines
+            if frame_idx in data['Table']:
+                table = data['Table'][frame_idx]
+                frame = show_table(frame, table, (0, 255, 0), 5)
+
+            # TODO add ball bounding box
+            if frame_idx in data['Phase 3 - Ball - Final Ball Centers']:
+                c_x, c_y = data['Phase 3 - Ball - Final Ball Centers'][frame_idx]
+                p1 = (int(c_x) - 10, int(c_y) - 10)
+                p2 = (int(c_x) + 10, int(c_y) + 10)
+                frame = cv2.rectangle(frame, p1, p2, (0, 255, 0), 3)
+
+            # TODO add bounce dots
+            for i in range(120):
+                if frame_idx - i in data['Phase 4 - Events']:
+                    if data['Phase 4 - Events'][frame_idx - i] == 'Bounce':
+                        c_x, c_y = data['Phase 3 - Ball - Final Ball Centers'][frame_idx - i]
+                        frame = cv2.circle(frame, (int(c_x), int(c_y)), 7, (255, 0, 0), -1)
+
             if make_video:
                 writer.write(frame)
             if save_ref_frames:
@@ -434,13 +482,14 @@ class Referee(GameParent):
 if __name__ == '__main__':
     saved_start = 2400
     frame_start = 2400 - saved_start
-    frame_end = 3000 - saved_start
+    frame_end = 25000 - saved_start
     x = Referee(frame_start, frame_end, saved_start)
     self = x
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"
     load_saved_frames = True
-    # pickle_path = ROOT_PATH + "/Games/output.pickle"
     pickle_path = None
-    make_video = False
-    save_ref_frames = True
+    # pickle_path = ROOT_PATH + "/Games/output.pickle"
+    pickle_path = ROOT_PATH + "/Games/output_full.pickle"
+    make_video = True
+    save_ref_frames = False
     x.run_referee(vid_path, load_saved_frames=load_saved_frames, pickle_path=pickle_path, make_video=make_video, save_ref_frames=save_ref_frames)

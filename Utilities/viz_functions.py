@@ -67,7 +67,7 @@ def draw_contours(img, contours, color):  # Run
     return img
 
 
-def show_table(img, table):  # Run
+def show_table(img, table, color=(100, 100, 100), thickness=2):  # Run
     """
     showing the table's border in gray on the image
     """
@@ -76,10 +76,10 @@ def show_table(img, table):  # Run
     p2 = (table[3], table[2])
     p3 = (table[5], table[4])
     p4 = (table[7], table[6])
-    img = cv2.line(img, p1, p2, (100, 100, 100), 2)
-    img = cv2.line(img, p2, p3, (100, 100, 100), 2)
-    img = cv2.line(img, p3, p4, (100, 100, 100), 2)
-    img = cv2.line(img, p4, p1, (100, 100, 100), 2)
+    img = cv2.line(img, p1, p2, color, thickness)
+    img = cv2.line(img, p2, p3, color, thickness)
+    img = cv2.line(img, p3, p4, color, thickness)
+    img = cv2.line(img, p4, p1, color, thickness)
     return img
 
 
