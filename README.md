@@ -92,9 +92,9 @@ By looking at the difference between two consecutive frames, I could easily loca
 These are two consecutive frames from one of the videos and their difference:
 
 <p float="left" align='center'>
-  <img src='./Misc/frame_2707.png' width=275>
-  <img src='./Misc/frame_2708.png' width=275>
-  <img src='./Misc/diff_2708.png' width=275>
+  <img src='./Misc/frame_2707.png' width=260>
+  <img src='./Misc/frame_2708.png' width=260>
+  <img src='./Misc/diff_2708.png' width=260>
 </p>
 
 The frames look almost identical, but difference shows some small movement.
@@ -113,9 +113,9 @@ The next task is programatically determining which contour is the ball, if any.
 
 
 <p float="left" align='center'>
-  <img src='./Misc/backtrack_2691.png' width=275>
-  <img src='./Misc/classic_2715.png' width=275>
-  <img src='./Misc/neighbor_2717.png' width=275>
+  <img src='./Misc/backtrack_2691.png' width=260>
+  <img src='./Misc/classic_2715.png' width=260>
+  <img src='./Misc/neighbor_2717.png' width=260>
 </p>
 
 ##### Find Ball - Classic
