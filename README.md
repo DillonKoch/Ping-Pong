@@ -1,6 +1,8 @@
 # Ping Pong Referee and Training Games
 
-GIF of a bunch of annotations over gameplay
+<p align="center">
+  <img src="./Misc/referee_annotated.gif" width=600 />
+</p>
 
 ## Contents
 <!-- 
@@ -273,7 +275,7 @@ The AI ref will start a point when the ball crosses over the net from one side t
 When a point ends, the winning player is awarded a point and the AI ref waits for another point to start.
 
 <p align="center">
-  <img src="./Misc/referee.gif" width=800 />
+  <img src="./Misc/referee_annotated.gif" width=800 />
 </p>
 
 ## [8. Coffin Corner Challenge](/Coffin-Corner-Challenge/)
