@@ -482,7 +482,7 @@ class Referee(GameParent):
 if __name__ == '__main__':
     saved_start = 2400
     frame_start = 2400 - saved_start
-    frame_end = 25000 - saved_start
+    frame_end = 23400 - saved_start
     x = Referee(frame_start, frame_end, saved_start)
     self = x
     vid_path = ROOT_PATH + "/Data/Train/Game6/gameplay.mp4"

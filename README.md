@@ -261,8 +261,34 @@ All it takes to detect the net hit here is to look for repeated, tall contours n
 
 ## [7. Referee](/Referee/)
 
+Once the table, ball, and events are located, the [AI referee](/Games/referee.py) has everything it needs.
+
+The AI ref will start a point when the ball crosses over the net from one side to the other, then end the point if any of the following occur:
+
+- The ball hits the net and does not cross over
+- The ball does not land on the other side of the table
+- The ball double bounces on one side
+- A player hits the ball back onto their own side of the table
+
+When a point ends, the winning player is awarded a point and the AI ref waits for another point to start.
+
 <p align="center">
   <img src="./Misc/referee.gif" width=800 />
 </p>
 
 ## [8. Coffin Corner Challenge](/Coffin-Corner-Challenge/)
+
+The coffin corner challenge uses the table, ball, and bounces to award players for hitting the ball near the corners of the table.
+
+<!-- Each bounce on the table is mapped to a shot chart using corresponding points between the four corners of the shot chart and the table. -->
+
+Bounces on the table are mapped to a shot chart by performing camera calibration with corresponding points from the table's corners in the video and the shot chart.
+
+Identifying the four corners in the shot chart is easy, since we created it.
+On the other hand, the four corners in the video are identified using the semantic segmentation model from part 4.
+
+
+
+<p align="center">
+  <img src="./Misc/coffin_corner_example3.png" height=300 />
+</p>
