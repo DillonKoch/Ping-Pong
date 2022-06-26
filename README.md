@@ -55,6 +55,10 @@ I used two data sources in this project:
 (script to download this is [download_data.py](/Data_Collection/download_data.py))
 - Videos I have personally taken with my iPhone 13, also recorded at 120 frames per second
 
+<p align="center">
+  <img src="./Misc/ForrestGump.gif" height=200 />
+</p>
+
 ## [3. Data Cleaning](/Data_Cleaning/)
 In order to train the table detection model faster, I use [frame_folders.py](/Data_Cleaning/frame_folders.py) to save off relevant frames from each video into separate folders.
 This way, I can efficiently load only the frames I need for training.
@@ -66,17 +70,37 @@ Additionally, I use [mov_to_mp4.py](/Data_Cleaning/mov_to_mp4.py) to convert iPh
 The first step in analyzing ping pong gameplay is to find the table.
 We need to know where the table is in order to detect bounces and map them to a shot chart.
 
-To do this, I used a UNet Semantic Segmentation model that identifies every pixel in an input image that belongs to the table.
+To do this, I used a [UNet Semantic Segmentation model](/Modeling/train_table_segmentation.py) that identifies every pixel in an input image that belongs to the table.
 
-((((Side by side images of a real frame and a table mask))))
+The model takes a raw frame from the video as input, and outputs a blank frame with all pixels belonging to the table in white.
 
-Regular frames from the ping pong game are sent to the model, and the output is a black image with white pixels where the table is.
+<p float="left" align='center'>
+  <img src='./Misc/unet_raw.png' width=400>
+  <img src='./Misc/unet_mask.png' width=400>
+</p>
 
-(((( details about the training process, the file to train, evaluation, and perhaps a screenshot of the weights and biases charts))))
 
-Once this output is created, I use opencv to find the 4 contours, or corners of the table.
+### Weights and Biases setup
+To monitor each model as it trains, I use [Weights and Biases](https://wandb.com) to track metrics like loss and accuracy.
 
-((( picture of a table mask with circles on the four corners )))
+Inside my training code, I simply send metrics to Weights and Biases, and they create a dashboard of with graphs like this:
+
+<p align="center">
+  <img src="Misc/wandb_plots.png" width=1200 />
+</p>
+
+
+### Training Models
+I split the games from the OpenTTGames dataset and my own videos into [train](/Data/Train/) and [test](/Data/Test/) groups.
+
+The [train models file](/Modeling/train_table_segmentation.py) runs a Weights and Biases "Sweep" to train and evaluate many models on the validation set to find the best hyperparameters.
+
+Once the model is trained, it can identify exactly where the table is in a frame, like this:
+
+<p align="center">
+  <img src="./Misc/unet_both.png" width=400 />
+</p>
+
 
 ## [5. Ball Detection](/Ball_Detection/)
 #### Experiments
